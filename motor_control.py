@@ -5,6 +5,7 @@ class motorControl:
     def __init__(self, motor)
         self.motor = motor #out1, out2, in1, in2,
         self.frequency = 10000
+        
     def setPWM(self, pwm):
         self.pwm = pwm
         
