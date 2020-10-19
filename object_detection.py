@@ -8,14 +8,11 @@ from motor_control import motor_control
 import serial
 from RPi.GPIO import GPIO
 
-motor1 = motor_control([1,2,3,4])
-motor1.setPins()
+'''defining motor object'''
+motor1 = motor_control([21, 20, 16, 13, 19])
+motor2 = motor_control([1, 7 ,8 ,5, 6])
 
-motor2 = motor_control([1,2,3,4])
-motor2.setPins()
-
-
-#variable for pid control
+'''variable for pid control'''
 dist_ref = 0.05
 dist_PID = PID(set_point=dist_ref)
 dist_PID.setSampleTime(0.1)
@@ -24,70 +21,25 @@ pos_ref = 0.5
 pos_PID = PID(set_point=pos_ref)
 pos_PID.setSampleTime(0.1)
 
-#serial connection
+'''serial connection for lidar'''
 ser = serial.Serial("/dev/serial0", 115200)
 
-usingPiCamera = True
-# Set initial frame size.
-frameSize = (320, 240)
-
-# Initialize mutithreading the video stream.
-vs = VideoStream(src=0, usePiCamera=usingPiCamera, resolution=frameSize,
-        framerate=10).start()
-# Allow the camera to warm up.
-time.sleep(2.0)
-
-
 def getTFminiData():
+    '''obtain distance value reading from lidar based on serial connection'''
     count = ser.in_waiting
     if count > 8:
         recv = ser.read(9)   
         ser.reset_input_buffer() 
         
-        if recv[0] == 0x59 and recv[1] == 0x59:     #python3
+        if recv[0] == 0x59 and recv[1] == 0x59:
             distance = recv[2] + recv[3] * 256
             distance = distance / 100
             print("current distance is {}m".format(distance))
             ser.reset_input_buffer()
     return distance
 
-
-        
-        
-        
-        
-class encoder:
-    def __init__ (self, ins=[4,5]):
-        self.rotation = 0
-        self.aLastState = GPIO.input(ins[0])
-        self.ins = ins
-    
-    def rotation (self):
-        aState = GPIO.input(self.ins[0])
-        
-        if (aState != self.aLastState):
-            if (GPIO.input(self.ins[1]) != aState):
-                 self.rotation = 1
-            else:
-                self.rotation = -1
-        else:
-            self.rotation = 0
-        self.aLastState = aState
-        
-
-RotL = encoder(ins=[20,21])
-RotR = encoder(ins=[22,23])
-
-
-
-
-#timeCheck = time.time()
-
-Ballcolor = 0
-Pt = [0,0,0]
-
-
 def getPosition(Ldist, Rdist, Pt):
+    '''obtain x, y, theta position based on encoder reading'''
     D = 15 #cm
     if Ldist != Rdist:
         r = D * (Ldist + Rdist) / 2 / (Rdist - Ldist)
@@ -101,9 +53,26 @@ def getPosition(Ldist, Rdist, Pt):
     return Pt
 
 
+
+'''define camera object to begin streaming'''
+usingPiCamera = True
+frameSize = (320, 240)
+
+vs = VideoStream(src=0, usePiCamera=usingPiCamera, resolution=frameSize,
+        framerate=10).start()
+# Allow the camera to warm up.
+time.sleep(2.0)
+
+'''initial parameter for program starting'''
+Ballcolor = 0
+Pt = [0,0,0]
+
+
+
+
+
 while True:
     time.sleep(0.1)
-    
     distance = getTFminiData()
     # Get the next frame.
     frame = vs.read()
@@ -154,15 +123,10 @@ while True:
                 Ballcolor = 1
             if Ballcolor == 1:
                 Ballcolor = 0;
-    
-    Pt = getPosition(RotL.rotation, RotL.rotation, Pt)
+    motor1.countRotation(); motor2.countRotation()
+    Pt = getPosition(motor1.rotation, motor2.rotation, Pt)
         
     
-    
-#    print(1/(time.time() - timeCheck))
-#    timeCheck = time.time()
-    
-# Cleanup before exit.
 cv2.destroyAllWindows()
 vs.stop()
 

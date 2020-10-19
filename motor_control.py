@@ -3,43 +3,48 @@ import time
 
 class motorControl:
     def __init__(self, motor)
-        self.motor = motor #out1, out2, in1, in2,
+        self.motor = motor #en, out1, out2, in1, in2,
         self.frequency = 10000
+        self.rotation = 0
         
-    def setPWM(self, pwm):
-        self.pwm = pwm
-        
-    def setPins(self):
         GPIO.setmode (GPIO.BCM)
         GPIO.setwarnings(False)
-
-        GPIO.setup(self.motor[0] ,GPIO.IN); GPIO.setup(self.motor[1] ,GPIO.IN);
+        GPIO.setup(self.motor[0], GPIO.OUT); GPIO.setup(self.motor[1], GPIO.OUT);
+        GPIO.setup(self.motor[2], GPIO.OUT); 
+        GPIO.setup(self.motor[3] ,GPIO.IN); GPIO.setup(self.motor[4] ,GPIO.IN);
         
-        GPIO.setup(self.motor[2], GPIO.OUT); GPIO.setup(self.motor[3], GPIO.OUT)
+        self.speed = GPIO.PWM(self.motor[0], frequency) #left
 
-    
-        self.OUT1 = GPIO.PWM(self.motor[0], frequency) #left
-        self.OUT2 = GPIO.PWM(self.motor[1], frequency) #left
-        self.OUT1.start(0); self.OUT2.start(0);
+        self.speed.start(0);
+        self.aLastState = GPIO.input(motor[3])
+
+
+    def setPWM(self, pwm):
+        self.pwm = pwm
 
     def stop(self):
-        self.OUT1.ChangeDutyCycle(0); self.OUT2.ChangeDutyCycle(0);
+        GPIO.output(motor[1], GPIO.LOW); GPIO.output(motor[2], GPIO.LOW)
+        self.speed.ChangeDutyCycle(0);
     
     def forward(self):
-        self.OUT1.ChangeDutyCycle(self.pwm); self.OUT2.ChangeDutyCycle(0)
+        GPIO.output(motor[1], GPIO.HIGH); GPIO.output(motor[2], GPIO.LOW)
+        self.speed.ChangeDutyCycle(self.pwm);
     
     def backward(self):
-        self.OUT1.ChangeDutyCycle(0); self.OUT2.ChangeDutyCycle(self.pwm)
-counter = 0 # use this to measure our motor positions
-aLastState = GPIO.input(31)
-while True:
-    astate = GPIO.input(31)
-    if (aState != aLastState):
-        if (GPIO.input(29) != aState):
-            counter = counter + 1
-        else
-            counter = counter - 1
-        print('the position of the motor = {}/n rad'.format(counter))
+        GPIO.output(motor[1], GPIO.LOW); GPIO.output(motor[2], GPIO.HIGH)
+        self.speed.ChangeDutyCycle(self.pwm);
+    
+    def countRotation(self):
+        aState = GPIO.input(self.motor[3])
         
-    aLastState = aState
+        if (aState != self.aLastState):
+            if (GPIO.input(self.motor[4]) != aState):
+                 self.rotation = 1
+            else:
+                self.rotation = -1
+        else:
+            self.rotation = 0
+        self.aLastState = aState   
+    
+
             
