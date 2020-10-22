@@ -4,13 +4,13 @@ import numpy as np
 from imutils.video import VideoStream
 import imutils
 from PID_control import PID
-from motor_control import motor_control
+from motor_control import motorControl
 import serial
-from RPi.GPIO import GPIO
+import RPi.GPIO as GPIO
 
 '''defining motor object'''
-motor1 = motor_control([21, 20, 16, 13, 19])
-motor2 = motor_control([1, 7 ,8 ,5, 6])
+motor1 = motorControl([12, 20, 16, 13, 19])
+motor2 = motorControl([1, 7 ,8 ,5, 6])
 
 '''variable for pid control'''
 dist_ref = 0.05
@@ -36,6 +36,8 @@ def getTFminiData():
             distance = distance / 100
             print("current distance is {}m".format(distance))
             ser.reset_input_buffer()
+        else:
+            distance = 0.01
     return distance
 
 def getPosition(Ldist, Rdist, Pt):
@@ -73,31 +75,37 @@ Pt = [0,0,0]
 
 while True:
     time.sleep(0.1)
-    distance = getTFminiData()
+    
     # Get the next frame.
     frame = vs.read()
     # If using a webcam instead of the Pi Camera,
     # we take the extra step to change frame size.
     if not usingPiCamera:
         frame = imutils.resize(frame, width=frameSize[0])
- 
+    
     # Show video stream
     cv2.imshow('orig', frame)
+    key = cv2.waitKey(1) & 0xFF
+ 
     # if the `q` key was pressed, break from the loop.
+    if key == ord("q"):
+        break
     
     data = frame
+    distance = getTFminiData()
     cameraPixels = sum(sum(data[:,:,Ballcolor] == 255))
-    leftPixels = sum(sum(data[0:160,:, Ballcolor] == 255))
-    rightPixels = sum(sum(data[160:320,:,Ballcolor] == 255))
-    
-    ratio = rightPixels / cameraPixels
+    leftPixels = sum(sum(data[:,:160, Ballcolor] == 255))
+    rightPixels = sum(sum(data[:,160: ,Ballcolor] == 255))
 
-    if cameraPixels < 500:
-        motor1.setPWM(20); motor1.backward()
-        motor2.setPWM(20); motor2.forward()
+    ratio = rightPixels / (cameraPixels + 1)
+
+
+    if cameraPixels < 300 :
+        motor1.setPWM(100); motor1.backward()
+        motor2.setPWM(100); motor2.forward()
     
-    elif (0.45 > ratio and ratio > 0.55):
-        pos_PID.update(ratio)
+    elif (0.2 > ratio and ratio > 0.8):
+        pos_PID.update(ratio-0.5)
         delta_pwm = pos_PID.output
         if ratio < 0.5:
             motor1.setPWM(delta_pwm); motor1.backward()
@@ -105,19 +113,17 @@ while True:
         else:
             motor1.setPWM(delta_pwm); motor1.backward()
             motor2.setPWM(delta_pwm); motor2.forward()  
-            
+        print('from second: delta_pwm = {}'.format(delta_pwm))     
     else:
-        
-        pos_PID.update(ratio)
+        pos_PID.update(ratio-0.5)
         delta_pwm = pos_PID.output
-        if ratio > 0.5:
-            delta_pwm = delta_pwm * -1
         
-        dist_PID.update(distance)
-        pwm = dist_PID.output
+        dist_PID.update(distance-0.05)
+        pwm = dist_PID.output 
         motor1.setPWM(pwm-delta_pwm); motor1.forward()
         motor2.setPWM(pwm + delta_pwm); motor2.forward()
-    
+        print('from third: delta_pwm = {}'.format(delta_pwm))
+        print('from third: pwm = {}'.format(pwm))
         if distance < 0.05:
             if Ballcolor == 0:
                 Ballcolor = 1
@@ -125,7 +131,8 @@ while True:
                 Ballcolor = 0;
     motor1.countRotation(); motor2.countRotation()
     Pt = getPosition(motor1.rotation, motor2.rotation, Pt)
-        
+    print(motor1.pwm)
+    print (ratio)
     
 cv2.destroyAllWindows()
 vs.stop()

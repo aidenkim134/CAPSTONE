@@ -4,7 +4,7 @@ class PID:
     """PID Controller
     """
 
-    def __init__(self, P=0.0, I=0.0, D=0.0, set_point=0):
+    def __init__(self, P=0.2, I=0, D=0, set_point=0):
 
         self.Kp = P; self.Ki = I; self.Kd = D
 
@@ -54,8 +54,7 @@ class PID:
     
     def setSampleTime(self, sample_time):
         self.sample_time = sample_time
-    
- 
+
 
 
 
