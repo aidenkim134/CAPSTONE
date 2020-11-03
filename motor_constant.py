@@ -11,15 +11,16 @@ time.sleep(2)
 data = [[],[]]
 
 i = 0
-motor1.setPWM(100); motor1.forward()
-
-while i < 1000:
-    data[0].append(i * 0.001); data[1].append(enc.read())
-    time.sleep(0.001)
+motor1.setPWM(0); motor1.forward()
+startTime = time.time_ns()
+while i < 50:
+    motor1.setPWM(20); motor1.forward()
+    data[0].append(time.time_ns() - startTime); data[1].append(enc.read())
+    time.sleep(0.1)
     print(i)
     i = i + 1
 
-print(len(data[0]), len(data[1]))
+
 motor1.setPWM(0); motor1.stop()
 data = pd.DataFrame({'time':data[0], 'value':data[1]})
 data.to_csv('data.csv')
