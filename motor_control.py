@@ -3,7 +3,7 @@ import time
 
 class motorControl:
     def __init__(self, motor):
-        self.motor = motor #en, out1, out2, in1, in2,
+        self.motor = motor #en, out1, out2
         self.frequency = 1000
         self.rotation = 0
         
@@ -33,18 +33,6 @@ class motorControl:
     def backward(self):
         GPIO.output(self.motor[1], GPIO.LOW); GPIO.output(self.motor[2], GPIO.HIGH)
         self.speed.ChangeDutyCycle(self.pwm);
-    
-    def countRotation(self):
-        aState = GPIO.input(self.motor[3])
-        
-        if (aState != self.aLastState):
-            if (GPIO.input(self.motor[4]) != aState):
-                 self.rotation = 1
-            else:
-                self.rotation = -1
-        else:
-            self.rotation = 0
-        self.aLastState = aState   
     
 
             
