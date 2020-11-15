@@ -17,23 +17,36 @@ enc2 = Encoder.Encoder(5, 6)
 '''definining stepper motor claw object'''
 stepper = [27, 22, 23, 24] #in1, in2, in3, in4
 claw = clawControl(stepper)
-claw.open()
+
 
 '''defining motor object'''
 motor1 = motorControl([21, 20, 16])
 motor2 = motorControl([1, 7 ,8])
 
 '''variable for pid control'''
-dist_ref = 0.1
-dist_PID = PID(set_point=dist_ref)
-dist_PID.setSampleTime(0.01)
+w_ref = 0
+w_PID = PID(set_point=w_ref)
+w_PID.setSampleTime(0.01)
 
-# pos_ref = 0.5
-# pos_PID = PID(set_point=pos_ref)
-# pos_PID.setSampleTime(0.1)
 
 '''serial connection for lidar'''
 ser = serial.Serial("/dev/serial0", 115200)
+
+
+'''define camera object to begin streaming'''
+usingPiCamera = True
+frameSize = (320, 240)
+
+vs = VideoStream(src=0, usePiCamera=usingPiCamera, resolution=frameSize,
+        framerate=10).start()
+# Allow the camera to warm up.
+time.sleep(2.0)
+
+'''initial parameter for program starting'''
+
+Pt = [0,0,0]
+rot_speed = 20 #20% 
+
 
 def getTFminiData():
     '''obtain distance value reading from lidar based on serial connection'''
@@ -48,12 +61,12 @@ def getTFminiData():
             print("current distance is {}m".format(distance))
             ser.reset_input_buffer()
         else:
-            distance = 0.01
+            distance = 0
     return distance
 
 def getPosition(Ldist, Rdist, Pt):
     '''obtain x, y, theta position based on encoder reading'''
-    D = 15 #cm
+    D = 5 #cm
     if Ldist != Rdist:
         r = D * (Ldist + Rdist) / 2 / (Rdist - Ldist)
         Pt[2] = (Rdist - Ldist) / D + Pt[2]
@@ -67,121 +80,161 @@ def getPosition(Ldist, Rdist, Pt):
     Pt[2] = Pt[2] % 360
     return Pt
 
-
-
-'''define camera object to begin streaming'''
-usingPiCamera = True
-frameSize = (320, 240)
-
-vs = VideoStream(src=0, usePiCamera=usingPiCamera, resolution=frameSize,
-        framerate=10).start()
-# Allow the camera to warm up.
-time.sleep(2.0)
-
-'''initial parameter for program starting'''
-Ballcolor = 1
-Pt = [0,0,0]
-
-
-
-rot_speed = 20 #20% 
-newBall = True
-
-
 def UpdatePt (Pt):
     rotation1 = enc1.read()/ 10550; rotation2 = enc2.read() / 10550
     Pt = getPosition(rotation1, rotation2, Pt)
     return Pt
 
-def GrabBall(Pt, ball, bound):
+def Rotate(motor1, motor2,speed):
+    w_PID.update(speed);
+    pwm = w_PID.output
+    motor1.setpwm(pwm); motor1.backward()
+    motor2.setPWM(pwm); motor2.forward()
+    
+def RotateCC(motor1, motor2,speed):
+    w_PID.update(speed);
+    pwm = w_PID.output
+    motor1.setpwm(pwm); motor1.forward()
+    motor2.setPWM(pwm); motor2.backward()
+
+def Backward(motor1, motor2, speed):
+    w_PID.update(speed);
+    pwm = w_PID.output
+    motor1.setpwm(pwm); motor1.backward()
+    motor2.setPWM(pwm); motor2.backward()
+
+def Forward(motor1, motor2, speed):
+    w_PID.update(speed);
+    pwm = w_PID.output
+    motor1.setpwm(pwm); motor1.forward()
+    motor2.setPWM(pwm); motor2.forward()
+
+def Stop (motor1, motor2):
+    motor1.setpwm(0); motor1.forward()
+    motor2.setPWM(0); motor2.forward()
+
+def GrabBall(Pt, ballColor, bound):
     Pt = Pt.copy()
     Pto = Pt
-    
-    while 95 < abs(Pt[2] - Pto[2]) < 85:
+
+    while 185 < abs(Pt[2] - Pto[2]) or abs(Pt[2] - Pto[2]) < 175:
         time.sleep(0.01)
-        motor1.setPWM(rot_speed); motor1.backward()
-        motor2.setPWM(rot_speed); motor2.forward()
-        rotation1 = enc1.read()/ 10550; rotation2 = enc2.read() / 10550
-        Pt = getPosition(rotation1, rotation2, Pt)
-        
+        Rotate(motor1, motor2, 40)
+        Pt = UpdatePt(Pt)
+    Stop(motor1, motor2)
     
-    while np.sqrt(((Pt[0] - Pto[0])**2 - (Pt[1] - Pto[1])**2)) > 0.8:
-        time.sleep
-        
-        motor1.setPWM(rot_speed); motor1.backward()
-        motor2.setPWM(rot_speed); motor2.backward()
-    
-        rotation1 = enc1.read()/ 10550; rotation2 = enc2.read() / 10550
-        Pt = getPosition(rotation1, rotation2, Pt)
-    
+    while abs(Pt[0] - Pto[0]) > 0.05 and abs(Pt[1] - Pto[1]) > 0.05:
+        time.sleep(0.01)
+        Backward(motor1, motor2, 50)
+        Pt = UpdatePt(Pt)
+    Stop(motor1, motor2)
     
     claw.close()
-    if ball == 0:
+    
+    if ballColor == 'red':
         while (88 > Pt[2] or 92 < Pt[2]):
             time.sleep(0.01)
-            motor1.setPWM(rot_speed); motor1.backward()
-            motor2.setPWM(rot_speed); motor2.forward()
+            Rotate(motor1, motor2, 40)
             Pt = UpdatePt (Pt)
-            
+        Stop(motor1, motor2)  
         while getTFminiData() > 0.1:
             time.sleep(0.01)
-            motor1.setPWM(rot_speed); motor1.forward()
-            motor2.setPWM(rot_speed); motor2.forward()
+            Forward(motor1, motor2, 50)
             Pt = UpdatePt (Pt)
+        Stop(motor1, motor2)   
         
-        while (358 > Pt[2] and 2 < Pt[2]):
+        while (2 < Pt[2]):
             time.sleep(0.01)
-            motor1.setPWM(rot_speed); motor1.backward()
-            motor2.setPWM(rot_speed); motor2.forward()
+            Rotate(motor1, motor2, 40)     
             Pt = UpdatePt (Pt) 
-            
-        while Pt[0] >bound[0]:
+        Stop(motor1, motor2)
+        
+        while Pt[0] > bound[0]:
             time.sleep(0.01)
-            motor1.setPWM(rot_speed); motor1.backward()
-            motor2.setPWM(rot_speed); motor2.backward()
+            Backward(motor1, motor2, 80)
             Pt = UpdatePt (Pt) 
+        Stop(motor1, motor2)
         
         claw.open()
             
-    if ball == 1:
+    if ballColor == 'blue':
         while (268 > Pt[2] or 272 < Pt[2]):
             time.sleep(0.01)
-            motor1.setPWM(rot_speed); motor1.backward()
-            motor2.setPWM(rot_speed); motor2.forward()
+            Rotate(motor1, motor2, 40)
             Pt = UpdatePt (Pt)
+        Stop(motor1, motor2)
         
         while getTFminiData() > 0.1:
             time.sleep(0.01)
-            motor1.setPWM(rot_speed); motor1.forward()
-            motor2.setPWM(rot_speed); motor2.forward()
+            Forward(motor1, motor2, 80)
             Pt = UpdatePt (Pt)
-    
-        while (178 > Pt[2] or 182 < Pt[2]):
+        Stop(motor1, motor2)
+        
+        while (182 < Pt[2]):
             time.sleep(0.01)
-            motor1.setPWM(rot_speed); motor1.backward()
-            motor2.setPWM(rot_speed); motor2.forward()
+            Rotate(motor1, motor2, 40)
             Pt = UpdatePt (Pt) 
-    
+        Stop(motor1, motor2)
+        
         while Pt[0] < bound[0]:
             time.sleep(0.01)
-            motor1.setPWM(rot_speed); motor1.backward()
-            motor2.setPWM(rot_speed); motor2.backward()
+            Backward(motor1, motor2, 80)
             Pt = UpdatePt (Pt) 
+        Stop(motor1, motor2)
+        
         claw.open()
     
-enc_ref1 = 0; enc_ref2 = 0
+
+
+#coordinates of the bound and whether they have been identified or not 
 IdentifyBound = False
 bound = [[],[]]; edge = False;
+
+ballColor = 'red'
+
+#minimum distance for the robot to approach object
+minDist = 0.1
+began = False
+
+
 try:
     while True:
+        if ballColor == 'red':
+            colorLimit = [([0,0,0], [225, 100, 65])]
+        if ballColor == 'blue':
+            colorLimit = [([0,0,10], [225, 50, 225])]
+        
         time.sleep(0.01)
         
         # Get the next frame.
+        vs.camera.zoom = (0.45, 0.45, 0.45, 0.45)
         frame = vs.read()
-        # If using a webcam instead of the Pi Camera,
-        # we take the extra step to change frame size.
-        if not usingPiCamera:
-            frame = imutils.resize(frame, width=frameSize[0])
+        
+        #only take red or blue color
+        for (lower, upper) in colorLimit:
+            lower = np.array(lower, dtype='uint8')
+            upper = np.array(upper, dtype='uint8')
+            
+            mask = cv2.inRange(frame, lower, upper)
+            frame = cv2.bitwise_and(frame, frame, mask=mask)
+            
+        #find circular image using edge finding and hough transform (circle)
+        gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+        circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 2.5, 50)
+        if began == False:
+            preCircle = np.array([[0,0,0,0]])
+            began = True
+        
+        try:
+            circles = np.round(circles[0, :]).astype(int)
+            preCircle = circles.copy()
+        except:
+            circles = preCircle
+            
+        for (x, y, r) in circles:
+            cv2.circles(frame, (x,y), r, (0, 225, 0), 4)
+            cv2.rectangle(frame, (x-2, y-2), (x+2, y+2), (0, 128, 225), -1)
+            break
         
         # Show video stream
         cv2.imshow('orig', frame)
@@ -194,64 +247,54 @@ try:
         data = frame
         distance = getTFminiData()
         
-        cameraPixels = sum(sum(data[:,:,Ballcolor] == 255))
-        
-        leftPixels = sum(sum(data[:,:160, Ballcolor] == 255))
-        rightPixels = sum(sum(data[:,160: ,Ballcolor] == 255))
-        ratio = rightPixels / (cameraPixels + 1)
+
 
         
+        turnDeg = [270, 180, 90, 0]
         if IdentifyBound == False:
-            if distance > 0.1 and edge == False:
-                motor1.setPWM(rot_speed); motor1.forward()
-                motor2.setPWM(rot_speed); motor2.forward()
-                
-            elif distance < 0.1 and  92 < Pt[2] > 88:
+            if distance > 0.1:
+                speed = 80
+            if distance < 0.1:
+                speed = 0
+
+            
+            if distance > 0.1 and edge==False:
+                Forward(motor1, motor2, speed)
+            
+            elif turnDeg [len(bound[0])] == int(Pt[2]):
                 edge = True
-                motor1.setPWM(rot_speed); motor1.forward()
-                motor2.setPWM(rot_speed); motor2.backward()
+                Rotate(motor1, motor2, 40)
+                
             else:
+                edge = False
+                
                 bound[0].append(Pt[0])
                 bound[1].append(Pt[1])
+            
             if len(bound[0]) == 4:
                 IdentifyBound = True
 
-
-        elif cameraPixels < 300 :
+        elif 165 < x < 155:
+            speed = 40
             #rotate at 20 percent speed until it finds a ball
-            motor1.setPWM(rot_speed); motor1.backward()
-            motor2.setPWM(rot_speed); motor2.forward()
-        
+            Rotate(motor1, motor2, speed)
 
-        elif ratio < 0.4:
-            motor1.setPWM(rot_speed); motor1.backward()
-            motor2.setPWM(rot_speed); motor2.forward()
-        elif ratio > 0.6:
-            motor1.setPWM(rot_speed); motor1.backward()
-            motor2.setPWM(rot_speed); motor2.forward()  
-        
-        elif (0.45 < ratio and ratio > 0.55):
-
+        elif (165 > x > 155):
+            if distance > 0.1:
+                speed = 80
+            if distance < 0.1:
+                speed = 0
             
-            dist_PID.update(distance)
-            pwm = dist_PID.output
-            if pwm > 0:            
-                motor1.setPWM(pwm); motor1.forward()
-                motor2.setPWM(pwm); motor2.forward()
-            
-            if pwm < 0:
-                motor1.setPWM(abs(pwm)); motor1.backward()
-                motor2.setPWM(abs(pwm)); motor2.backward()
+            Forward(motor1, motor2, speed)
                 
             if distance < 0.1:
-                Pt = GrabBall(Pt, Ballcolor, bound)
-                if Ballcolor == 0:
-                    Ballcolor = 1
-                if Ballcolor == 1:
-                    Ballcolor = 0;
+                Pt = GrabBall(Pt, ballColor, bound)
+                if ballColor == 0:
+                    ballColor = 1
+                if ballColor == 1:
+                    ballColor = 0;
 
-        rotation1 = enc1.read()/ 10550; rotation2 = enc2.read() / 10550
-        Pt = getPosition(rotation1, rotation2, Pt)
+        Pt = UpdatePt(Pt)
         
 
 except KeyboardInterrupt:
