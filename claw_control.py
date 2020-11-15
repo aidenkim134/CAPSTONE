@@ -11,7 +11,7 @@ class clawControl:
         self.step_seq = [
                               [1,0,0,0],
                               [0,1,0,0],
-                              [1,0,1,0],
+                              [0,0,1,0],
                               [0,0,0,1]
                             ]
         
@@ -22,19 +22,24 @@ class clawControl:
     
     #1.8 degrees / 2 for this half step control. Currently just set at 100
     def clawClose(self):
-        for i in range(100):
+        for i in range(120):
             for step in range(4):
                 for pin in range(4):
-                    GPIO.output(self.pins[pin], self.step_seq[3-step][pin])
+                    GPIO.output(self.pins[pin], self.step_seq[step][pin])
                 time.sleep(0.01)
         self.open = False
         
         
     def clawOpen (self):
-        for i in range(100):
+        for i in range(120):
             for step in range(4):
                 for pin in range(4):
-                    GPIO.output(self.pins[pin], self.step_seq[step][pin])
+                    GPIO.output(self.pins[pin], self.step_seq[3-step][pin])
                 time.sleep(0.01)
         self.open = True
-        
+
+stepper = [27, 22, 23, 24] #in1, in2, in3, in4
+claw = clawControl(stepper)
+claw.clawClose()
+time.sleep(2)
+claw.clawOpen()

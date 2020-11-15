@@ -17,29 +17,50 @@ vs = VideoStream(src=0, usePiCamera=usingPiCamera, resolution=frameSize,
 time.sleep(2.0)
  
 #timeCheck = time.time()
+began = False
 while True:
-    time.sleep(0.1)
+    time.sleep(0.01)
+    colorLimit = [([0,0,80], [225, 70, 225])]
+    colorLimit = [([30,0,0], [225, 60, 100])]
+
     # Get the next frame.
+    vs.camera.zoom = (0.45, 0.45, 0.45, 0.45)
     frame = vs.read()
+    cv2.imwrite('original.png', frame)
+    #only take red or blue color
+    for (lower, upper) in colorLimit:
+        lower = np.array(lower, dtype='uint8')
+        upper = np.array(upper, dtype='uint8')
+        
+        mask = cv2.inRange(frame, lower, upper)
+        frame = cv2.bitwise_and(frame, frame, mask=mask)
+        
+    #find circular image using edge finding and hough transform (circle)
+    gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 2.5, 50)
+    if began == False:
+        preCircle = np.array([[0,0,0]])
+        began = True
     
-    # If using a webcam instead of the Pi Camera,
-    # we take the extra step to change frame size.
-    if not usingPiCamera:
-        frame = imutils.resize(frame, width=frameSize[0])
- 
+    try:
+        circles = np.round(circles[0, :]).astype(int)
+        preCircle = circles.copy()
+    except:
+        circles = preCircle
+    print(circles)  
+    for (x, y, r) in circles:
+        cv2.circle(frame, (x,y), r, (0, 225, 0), 4)
+        cv2.rectangle(frame, (x-2, y-2), (x+2, y+2), (0, 128, 225), -1)
+        break
+    
     # Show video stream
     cv2.imshow('orig', frame)
+    cv2.imwrite('blue.png', frame)
     key = cv2.waitKey(1) & 0xFF
  
     # if the `q` key was pressed, break from the loop.
     if key == ord("q"):
         break
-    
-    data = frame
-    
-    process = data[125:175, 125:175]
-    value = sum(sum(data[:,:,0] == 255))
-    print(value)
     
 #    print(1/(time.time() - timeCheck))
 #    timeCheck = time.time()

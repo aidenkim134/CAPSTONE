@@ -200,9 +200,9 @@ began = False
 try:
     while True:
         if ballColor == 'red':
-            colorLimit = [([0,0,0], [225, 100, 65])]
+            colorLimit = [([0,0,80], [225, 70, 225])]
         if ballColor == 'blue':
-            colorLimit = [([0,0,10], [225, 50, 225])]
+            colorLimit = [([30,0,0], [225, 60, 100])]
         
         time.sleep(0.01)
         
@@ -222,7 +222,7 @@ try:
         gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
         circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 2.5, 50)
         if began == False:
-            preCircle = np.array([[0,0,0,0]])
+            preCircle = np.array([[0,0,0]])
             began = True
         
         try:
@@ -232,7 +232,7 @@ try:
             circles = preCircle
             
         for (x, y, r) in circles:
-            cv2.circles(frame, (x,y), r, (0, 225, 0), 4)
+            cv2.circle(frame, (x,y), r, (0, 225, 0), 4)
             cv2.rectangle(frame, (x-2, y-2), (x+2, y+2), (0, 128, 225), -1)
             break
         
@@ -243,11 +243,10 @@ try:
         # if the `q` key was pressed, break from the loop.
         if key == ord("q"):
             break
+        continue
         
         data = frame
         distance = getTFminiData()
-        
-
 
         
         turnDeg = [270, 180, 90, 0]
