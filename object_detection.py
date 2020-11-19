@@ -24,8 +24,9 @@ motor1 = motorControl([21, 16, 20])
 motor2 = motorControl([1, 7 ,8])
 
 '''defining PID object'''
-w_PID1 = PID(set_point = 40)
-w_PID2 = PID(set_point = 40)
+w_PID1 = PID(set_point = 0)
+w_PID2 = PID(set_point = 0)
+
 
 
 
@@ -42,6 +43,9 @@ vs = VideoStream(src=0, usePiCamera=usingPiCamera, resolution=frameSize,
 # Allow the camera to warm up.
 time.sleep(2.0)
 
+
+rotation_speed= 50
+forward_speed = 90
 
 
 def getSpeed (pre_enc1, pre_enc2):
@@ -90,31 +94,27 @@ def UpdatePt (Pt):
     Pt = getPosition(rotation1, rotation2, Pt)
     return Pt
 
-def Rotate(motor1, motor2, speed):
-    w_PID.update(speed);
-    pwm = w_PID.output
-    motor1.setPWM(pwm); motor1.backward()
-    motor2.setPWM(pwm); motor2.forward()
-    
-def RotateCC(motor1, motor2,speed):
-    w_PID.update(speed);
-    pwm = w_PID.output
-    motor1.setPWM(pwm); motor1.forward()
-    motor2.setPWM(pwm); motor2.backward()
-
-def Backward(motor1, motor2, speed):
-    w_PID.update(speed);
-    pwm = w_PID.output
-    motor1.setPWM(pwm); motor1.backward()
-    motor2.setPWM(pwm); motor2.backward()
-
-def Forward(motor1, motor2, speed, vel1, vel2):
-
+def Rotate(speed, vel1, vel2):
     w_PID1.update(vel1) ; w_PID1.update(vel2)
-    print(w_PID1.output)
+    motor1.setPWM(w_PID1.output); motor1.backward()
+    motor2.setPWM(w_PID2.output); motor2.forward()
+    
+def RotateCC(speed, vel1, vel2):
+    w_PID1.update(vel1) ; w_PID1.update(vel2)
+    motor1.setPWM(w_PID1.output); motor1.forward()
+    motor2.setPWM(w_PID2.output); motor2.backward()
+
+def Backward(speed, vel1, vel2):
+    w_PID1.update(vel1) ; w_PID1.update(vel2)
+    motor1.setPWM(w_PID1.output); motor1.backward()
+    motor2.setPWM(w_PID2.output); motor2.backward()
+
+def Forward(speed, vel1, vel2):
+    w_PID1.update(vel1) ; w_PID1.update(vel2)
+
     motor1.setPWM(w_PID1.output); motor1.forward()
     motor2.setPWM(w_PID2.output); motor2.forward()
-
+    
 def Stop (motor1, motor2):
     motor1.setPWM(0); motor1.forward()
     motor2.setPWM(0); motor2.forward()
@@ -214,7 +214,7 @@ try:
         
         time.sleep(0.1)
         [vel1, vel2] = getSpeed(pre_enc1, pre_enc2)
-        Forward(motor1, motor2, 40, vel1, vel2)
+        
         Pt = UpdatePt(Pt)
         print(Pt)
         continue
@@ -255,26 +255,25 @@ try:
         # if the `q` key was pressed, break from the loop.
         if key == ord("q"):
             break
-        continue
+
         
-        data = frame
         distance = getTFminiData()
 
         
         turnDeg = [270, 180, 90, 0]
         if IdentifyBound == False:
             if distance > 0.1:
-                speed = 80
-            if distance < 0.1:
+                speed = forward_speed
+            if distance <= 0.1:
                 speed = 0
 
             
             if distance > 0.1 and edge==False:
-                Forward(motor1, motor2, speed)
+                Forward(speed, vel1, vel2)
             
             elif turnDeg [len(bound[0])] == int(Pt[2]):
                 edge = True
-                Rotate(motor1, motor2, 40)
+                Rotate(rotation_speed, vel1, vel2)
                 
             else:
                 edge = False
@@ -286,19 +285,18 @@ try:
                 IdentifyBound = True
 
         elif 165 < x < 155:
-            speed = 40
             #rotate at 20 percent speed until it finds a ball
-            Rotate(motor1, motor2, speed)
+            Rotate(rotation_speed, vel1, vel2)
 
         elif (165 > x > 155):
             if distance > 0.1:
-                speed = 80
-            if distance < 0.1:
+                speed = forward_speed
+            if distance <= 0.1:
                 speed = 0
-            
             Forward(motor1, motor2, speed)
                 
             if distance < 0.1:
+                break
                 Pt = GrabBall(Pt, ballColor, bound)
                 if ballColor == 'red':
                     ballColor = 'blue'
