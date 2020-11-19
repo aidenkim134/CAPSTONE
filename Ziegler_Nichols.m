@@ -1,7 +1,8 @@
 close all; clc; clear
-g = tf(0.00849247,[0.00030207 0.00135412 0.00395008]);
+g = tf(0.00849247* 9.5492965 / 20,[0.00030207 0.00135412 0.00395008]);
 
 [y, t] = step(g);
+
 
 
 ypp = diff(y, 2); 
@@ -10,6 +11,7 @@ t_inf1 = fzero(@(T) interp1(t(2:end-1), ypp, T, 'linear', 'extrap'),0);
 y_inf1 = interp1(t, y, t_inf1, 'linear');
 figure(); hold on; 
 plot(t,y); plot(t_inf1, y_inf1, 'x');
+xlabel('time (s)'); ylabel('speed (rad/s)')
 
 h = mean(diff(t));
 dy = gradient(y, h);
@@ -37,4 +39,6 @@ fprintf('\n');
 fprintf('Ki is: %d', ki);
 fprintf('\n');
 fprintf('Kd is: %d', kd);
-
+C = tf([Td, 1, 1/Ti], [1 0]);
+figure()
+rlocus(C * g)

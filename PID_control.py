@@ -4,11 +4,11 @@ class PID:
     """PID Controller
     """
 
-    def __init__(self, P=0.2, I=0, D=0, set_point=0):
+    def __init__(self, P=1, I=1.2, D=0.1, set_point=None):
 
         self.Kp = P; self.Ki = I; self.Kd = D
 
-        self.sample_time = 0
+        self.sample_time = 0.01
         self.current_time = time.time()
         self.last_time = self.current_time
         self.SetPoint = set_point
@@ -17,7 +17,7 @@ class PID:
 
     def clear(self):
         """Clears PID computations and coefficients"""
-        self.SetPoint = 0.0
+
 
         self.PTerm = 0.0
         self.ITerm = 0.0
@@ -51,10 +51,25 @@ class PID:
             self.last_error = error
 
             self.output = self.PTerm + self.ITerm + self.DTerm
+            if self.output > 100:
+                self.output = 100
+            if self.output < 0:
+                self.output = 0
+            
+            
     
     def setSampleTime(self, sample_time):
         self.sample_time = sample_time
 
 
+if __name__ == '__main__':
+    w_PID = PID()
+    w_PID.setSampleTime(0.01)
+    
+    for i in range(1,20):
+        time.sleep(0.01)
+        w_PID.SetPoint= 40
+        w_PID.update(40*i / 20)
+        print(w_PID.output)
 
 

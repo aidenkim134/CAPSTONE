@@ -37,9 +37,9 @@ class clawControl:
                     GPIO.output(self.pins[pin], self.step_seq[3-step][pin])
                 time.sleep(0.01)
         self.open = True
-
-stepper = [27, 22, 23, 24] #in1, in2, in3, in4
-claw = clawControl(stepper)
-claw.clawClose()
-time.sleep(2)
-claw.clawOpen()
+if __name__ == "__main__":
+    stepper = [27, 22, 23, 24] #in1, in2, in3, in4
+    claw = clawControl(stepper)
+    claw.clawClose()
+    time.sleep(2)
+    claw.clawOpen()

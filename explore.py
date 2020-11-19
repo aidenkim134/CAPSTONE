@@ -45,6 +45,8 @@ class curveFit2:
         plt.plot(self.data['time'], self.data['speed'])
         plt.plot(self.time, y)
         plt.xlim([0,5])
+        plt.xlabel('time(s)'); plt.ylabel('rad/s')
+        plt.title('Motor speed response to input of [20]')
 
 obj = curveFit2(data)
 obj.solve()

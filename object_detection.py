@@ -24,9 +24,9 @@ motor1 = motorControl([21, 20, 16])
 motor2 = motorControl([1, 7 ,8])
 
 '''variable for pid control'''
-w_ref = 0
-w_PID = PID(set_point=w_ref)
-w_PID.setSampleTime(0.01)
+
+w_PID = PID()
+w_PID.setSampleTime(0.1)
 
 
 '''serial connection for lidar'''
@@ -42,10 +42,14 @@ vs = VideoStream(src=0, usePiCamera=usingPiCamera, resolution=frameSize,
 # Allow the camera to warm up.
 time.sleep(2.0)
 
-'''initial parameter for program starting'''
 
-Pt = [0,0,0]
-rot_speed = 20 #20% 
+
+def getSpeed (start_time, pre_enc1, pre_enc2):
+    
+    vel1 = (enc1.read() - pre_enc1) / 10550 / 0.1 * 2 * np.pi
+    vel2 = (enc2.read() - pre_enc2) / 10550 / 0.1 * 2 * np.pi
+    return vel1, vel2
+
 
 
 def getTFminiData():
@@ -85,32 +89,35 @@ def UpdatePt (Pt):
     Pt = getPosition(rotation1, rotation2, Pt)
     return Pt
 
-def Rotate(motor1, motor2,speed):
+def Rotate(motor1, motor2, speed):
     w_PID.update(speed);
     pwm = w_PID.output
-    motor1.setpwm(pwm); motor1.backward()
+    motor1.setPWM(pwm); motor1.backward()
     motor2.setPWM(pwm); motor2.forward()
     
 def RotateCC(motor1, motor2,speed):
     w_PID.update(speed);
     pwm = w_PID.output
-    motor1.setpwm(pwm); motor1.forward()
+    motor1.setPWM(pwm); motor1.forward()
     motor2.setPWM(pwm); motor2.backward()
 
 def Backward(motor1, motor2, speed):
     w_PID.update(speed);
     pwm = w_PID.output
-    motor1.setpwm(pwm); motor1.backward()
+    motor1.setPWM(pwm); motor1.backward()
     motor2.setPWM(pwm); motor2.backward()
 
-def Forward(motor1, motor2, speed):
+def Forward(motor1, motor2, speed, vel1, vel2):
+    w_PID = PID(set_point = speed)
+    w_PID.update
+
     w_PID.update(speed);
     pwm = w_PID.output
-    motor1.setpwm(pwm); motor1.forward()
+    motor1.setPWM(pwm); motor1.forward()
     motor2.setPWM(pwm); motor2.forward()
 
 def Stop (motor1, motor2):
-    motor1.setpwm(0); motor1.forward()
+    motor1.setPWM(0); motor1.forward()
     motor2.setPWM(0); motor2.forward()
 
 def GrabBall(Pt, ballColor, bound):
@@ -118,13 +125,13 @@ def GrabBall(Pt, ballColor, bound):
     Pto = Pt
 
     while 185 < abs(Pt[2] - Pto[2]) or abs(Pt[2] - Pto[2]) < 175:
-        time.sleep(0.01)
+        time.sleep(0.1)
         Rotate(motor1, motor2, 40)
         Pt = UpdatePt(Pt)
     Stop(motor1, motor2)
     
     while abs(Pt[0] - Pto[0]) > 0.05 and abs(Pt[1] - Pto[1]) > 0.05:
-        time.sleep(0.01)
+        time.sleep(0.1)
         Backward(motor1, motor2, 50)
         Pt = UpdatePt(Pt)
     Stop(motor1, motor2)
@@ -133,24 +140,24 @@ def GrabBall(Pt, ballColor, bound):
     
     if ballColor == 'red':
         while (88 > Pt[2] or 92 < Pt[2]):
-            time.sleep(0.01)
+            time.sleep(0.1)
             Rotate(motor1, motor2, 40)
             Pt = UpdatePt (Pt)
         Stop(motor1, motor2)  
         while getTFminiData() > 0.1:
-            time.sleep(0.01)
+            time.sleep(0.1)
             Forward(motor1, motor2, 50)
             Pt = UpdatePt (Pt)
         Stop(motor1, motor2)   
         
         while (2 < Pt[2]):
-            time.sleep(0.01)
+            time.sleep(0.1)
             Rotate(motor1, motor2, 40)     
             Pt = UpdatePt (Pt) 
         Stop(motor1, motor2)
         
         while Pt[0] > bound[0]:
-            time.sleep(0.01)
+            time.sleep(0.1)
             Backward(motor1, motor2, 80)
             Pt = UpdatePt (Pt) 
         Stop(motor1, motor2)
@@ -159,25 +166,25 @@ def GrabBall(Pt, ballColor, bound):
             
     if ballColor == 'blue':
         while (268 > Pt[2] or 272 < Pt[2]):
-            time.sleep(0.01)
+            time.sleep(0.1)
             Rotate(motor1, motor2, 40)
             Pt = UpdatePt (Pt)
         Stop(motor1, motor2)
         
         while getTFminiData() > 0.1:
-            time.sleep(0.01)
+            time.sleep(0.1)
             Forward(motor1, motor2, 80)
             Pt = UpdatePt (Pt)
         Stop(motor1, motor2)
         
         while (182 < Pt[2]):
-            time.sleep(0.01)
+            time.sleep(0.1)
             Rotate(motor1, motor2, 40)
             Pt = UpdatePt (Pt) 
         Stop(motor1, motor2)
         
         while Pt[0] < bound[0]:
-            time.sleep(0.01)
+            time.sleep(0.1)
             Backward(motor1, motor2, 80)
             Pt = UpdatePt (Pt) 
         Stop(motor1, motor2)
@@ -195,17 +202,23 @@ ballColor = 'red'
 #minimum distance for the robot to approach object
 minDist = 0.1
 began = False
-
+'''initial parameter for program starting'''
+Pt = [0,0,0]
 
 try:
     while True:
+        pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
         if ballColor == 'red':
             colorLimit = [([0,0,80], [225, 70, 225])]
         if ballColor == 'blue':
             colorLimit = [([30,0,0], [225, 60, 100])]
         
-        time.sleep(0.01)
-        
+        time.sleep(0.1)
+        [vel1, vel2] = getSpeed(pre_enc1, pre_enc2)
+        Forward(motor1, motor2, 40, vel1, vel2)
+        Pt = UpdatePt(Pt)
+        print(Pt)
+        continue
         # Get the next frame.
         vs.camera.zoom = (0.45, 0.45, 0.45, 0.45)
         frame = vs.read()
@@ -288,10 +301,10 @@ try:
                 
             if distance < 0.1:
                 Pt = GrabBall(Pt, ballColor, bound)
-                if ballColor == 0:
-                    ballColor = 1
-                if ballColor == 1:
-                    ballColor = 0;
+                if ballColor == 'red':
+                    ballColor = 'blue'
+                if ballColor == 'blue':
+                    ballColor = 'red';
 
         Pt = UpdatePt(Pt)
         
