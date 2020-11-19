@@ -20,13 +20,13 @@ claw = clawControl(stepper)
 
 
 '''defining motor object'''
-motor1 = motorControl([21, 20, 16])
+motor1 = motorControl([21, 16, 20])
 motor2 = motorControl([1, 7 ,8])
 
-'''variable for pid control'''
+'''defining PID object'''
+w_PID1 = PID(set_point = 40)
+w_PID2 = PID(set_point = 40)
 
-w_PID = PID()
-w_PID.setSampleTime(0.1)
 
 
 '''serial connection for lidar'''
@@ -44,10 +44,11 @@ time.sleep(2.0)
 
 
 
-def getSpeed (start_time, pre_enc1, pre_enc2):
+def getSpeed (pre_enc1, pre_enc2):
     
     vel1 = (enc1.read() - pre_enc1) / 10550 / 0.1 * 2 * np.pi
     vel2 = (enc2.read() - pre_enc2) / 10550 / 0.1 * 2 * np.pi
+    print(vel1)
     return vel1, vel2
 
 
@@ -108,10 +109,9 @@ def Backward(motor1, motor2, speed):
     motor2.setPWM(pwm); motor2.backward()
 
 def Forward(motor1, motor2, speed, vel1, vel2):
-    w_PID1 = PID(set_point = speed)
-    w_PID2 = PID(set_point = speed)
-    w_PID1.update(vel1) ; w_PID1.update(vel2)
 
+    w_PID1.update(vel1) ; w_PID1.update(vel2)
+    print(w_PID1.output)
     motor1.setPWM(w_PID1.output); motor1.forward()
     motor2.setPWM(w_PID2.output); motor2.forward()
 

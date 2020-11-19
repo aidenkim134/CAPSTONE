@@ -8,7 +8,7 @@ class PID:
 
         self.Kp = P; self.Ki = I; self.Kd = D
 
-        self.sample_time = 0.01
+        self.sample_time = 0.1
         self.current_time = time.time()
         self.last_time = self.current_time
         self.SetPoint = set_point
@@ -63,12 +63,10 @@ class PID:
 
 
 if __name__ == '__main__':
-    w_PID = PID()
-    w_PID.setSampleTime(0.01)
-    
+    w_PID = PID(set_point = 40)
     for i in range(1,20):
-        time.sleep(0.01)
-        w_PID.SetPoint= 40
+        time.sleep(0.1)
+
         w_PID.update(40*i / 20)
         print(w_PID.output)
 
