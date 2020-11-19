@@ -108,13 +108,12 @@ def Backward(motor1, motor2, speed):
     motor2.setPWM(pwm); motor2.backward()
 
 def Forward(motor1, motor2, speed, vel1, vel2):
-    w_PID = PID(set_point = speed)
-    w_PID.update
+    w_PID1 = PID(set_point = speed)
+    w_PID2 = PID(set_point = speed)
+    w_PID1.update(vel1) ; w_PID1.update(vel2)
 
-    w_PID.update(speed);
-    pwm = w_PID.output
-    motor1.setPWM(pwm); motor1.forward()
-    motor2.setPWM(pwm); motor2.forward()
+    motor1.setPWM(w_PID1.output); motor1.forward()
+    motor2.setPWM(w_PID2.output); motor2.forward()
 
 def Stop (motor1, motor2):
     motor1.setPWM(0); motor1.forward()
