@@ -9,6 +9,7 @@ import serial
 import RPi.GPIO as GPIO
 from claw_control import clawControl
 import Encoder
+import matplotlib.pyplot as plt
 
 '''defining encoder object'''
 enc1 = Encoder.Encoder(13,19)
@@ -50,68 +51,109 @@ forward_speed = 90
 
 def getSpeed (pre_enc1, pre_enc2):
     
-    vel1 = (enc1.read() - pre_enc1) / 10550 / 0.1 * 2 * np.pi
-    vel2 = (enc2.read() - pre_enc2) / 10550 / 0.1 * 2 * np.pi
-    print(vel1)
+    vel1 = (enc1.read() - pre_enc1) / 36.5 / 0.102 
+    vel2 = (enc2.read() - pre_enc2) / 36.5 / 0.102 
     return vel1, vel2
 
 
 
 def getTFminiData():
-    '''obtain distance value reading from lidar based on serial connection'''
-    count = ser.in_waiting
-    if count > 8:
-        recv = ser.read(9)   
-        ser.reset_input_buffer() 
-        
-        if recv[0] == 0x59 and recv[1] == 0x59:
-            distance = recv[2] + recv[3] * 256
-            distance = distance / 100
-            print("current distance is {}m".format(distance))
-            ser.reset_input_buffer()
-        else:
-            distance = 0
-    return distance
+    while True:
+        count = ser.in_waiting
+        if count > 8:
+            recv = ser.read(9)   
+            ser.reset_input_buffer() 
+            
+            if recv[0] == 0x59 and recv[1] == 0x59:     #python3
+                distance = recv[2] + recv[3] * 256
+                distance = distance / 100
+                print("current distance is {}m".format(distance))
+                ser.reset_input_buffer()
+                return distance  
+            else:
+                distance = 0
+                return distance  
 
 def getPosition(Ldist, Rdist, Pt):
     '''obtain x, y, theta position based on encoder reading'''
-    D = 5 #cm
+    D = 0.185 #m
     if Ldist != Rdist:
-        r = D * (Ldist + Rdist) / 2 / (Rdist - Ldist)
-        Pt[2] = (Rdist - Ldist) / D + Pt[2]
-        Pt[0] = r * np.cos(Pt[2]) + Pt[0]
-        Pt[1] = r * np.sin(Pt[2]) + Pt[1]
+        r = D * (Ldist + Rdist) / 2 / np.abs(Rdist - Ldist)
+        Pt[2] = (Rdist - Ldist) / D * 360 / (2*np.pi) + Pt[2]
+        Pt[0] = r * np.cos(Pt[2] *2*np.pi / 360) + Pt[0]
+        Pt[1] = r * np.sin(Pt[2]*2*np.pi / 360) + Pt[1]
     else:
-        Pt[0] = Ldist * np.cos(Pt[2]) + Pt[0] 
-        Pt[1] = Ldist * np.sin(Pt[2]) + Pt[1]
-        Pt[2] = Pt[2]
+        Pt[0] = Ldist * np.cos(Pt[2]*2*np.pi / 360) + Pt[0] 
+        Pt[1] = Ldist * np.sin(Pt[2]*2*np.pi / 360) + Pt[1]
+        Pt[2] = Pt[2] * 360 / (2*np.pi)
     
     Pt[2] = Pt[2] % 360
     return Pt
 
-def UpdatePt (Pt):
-    rotation1 = enc1.read()/ 10550; rotation2 = enc2.read() / 10550
+def UpdatePt (Pt, pre_enc1, pre_enc2):
+    [vel1, vel2] = getSpeed(pre_enc1, pre_enc2)
+    print(vel1, vel2)
+    rotation1 = vel1 * (2*np.pi) / 60 * 0.102 *0.069 / 2; rotation2 = vel2 * (2*np.pi) / 60 *0.102 *0.068 / 2
+    print(rotation1, rotation2)
     Pt = getPosition(rotation1, rotation2, Pt)
     return Pt
+Pt = [0,0,0]
+motor1.setPWM(100)
+motor2.setPWM(100)
+motor1.forward(); motor2.forward()
+i =0
+theta = []; xpos = []; ypos=[]
+while True:
+    t = time.time_ns() / 1E9
+    if i > 22:
+        motor1.stop(); motor2.stop()
+        break
+    i = i + 1
+    pre_enc1 = enc1.read();pre_enc2 = enc2.read()
+    time.sleep(0.1)
+    
+    
+    Pt = UpdatePt(Pt, pre_enc1, pre_enc2)
+    xpos.append(Pt[0]); ypos.append(Pt[1])
+    theta.append(Pt[2])
+    
+plt.figure(1)
+plt.plot(theta);
+plt.show()
+plt.figure(2)
+plt.plot(xpos);
+plt.show()
+plt.figure(2)
+plt.plot(ypos);
+plt.show()
+while True:
+    motor1.stop()
+    motor2.stop()
+    
+
 
 def Rotate(speed, vel1, vel2):
-    w_PID1.update(vel1) ; w_PID1.update(vel2)
+    w_PID1.SetPoint = speed; w_PID2.SetPoint = speed; 
+    w_PID1.update(vel1) ; w_PID2.update(vel2)
     motor1.setPWM(w_PID1.output); motor1.backward()
     motor2.setPWM(w_PID2.output); motor2.forward()
     
 def RotateCC(speed, vel1, vel2):
+    w_PID1.SetPoint = speed; w_PID2.SetPoint = speed; 
     w_PID1.update(vel1) ; w_PID1.update(vel2)
     motor1.setPWM(w_PID1.output); motor1.forward()
     motor2.setPWM(w_PID2.output); motor2.backward()
 
 def Backward(speed, vel1, vel2):
-    w_PID1.update(vel1) ; w_PID1.update(vel2)
+    w_PID1.SetPoint = speed; w_PID2.SetPoint = speed; 
+    w_PID1.update(vel1) ; w_PID2.update(vel2)
     motor1.setPWM(w_PID1.output); motor1.backward()
     motor2.setPWM(w_PID2.output); motor2.backward()
 
 def Forward(speed, vel1, vel2):
-    w_PID1.update(vel1) ; w_PID1.update(vel2)
-
+    w_PID1.SetPoint = speed; w_PID2.SetPoint = speed; 
+    w_PID1.update(vel1) ; w_PID2.update(vel2)
+    print('pwm output is: {}, {}'.format(w_PID1.output, w_PID2.output))
     motor1.setPWM(w_PID1.output); motor1.forward()
     motor2.setPWM(w_PID2.output); motor2.forward()
     
@@ -214,10 +256,7 @@ try:
         
         time.sleep(0.1)
         [vel1, vel2] = getSpeed(pre_enc1, pre_enc2)
-        
-        Pt = UpdatePt(Pt)
-        print(Pt)
-        continue
+
         # Get the next frame.
         vs.camera.zoom = (0.45, 0.45, 0.45, 0.45)
         frame = vs.read()
@@ -258,8 +297,6 @@ try:
 
         
         distance = getTFminiData()
-
-        
         turnDeg = [270, 180, 90, 0]
         if IdentifyBound == False:
             if distance > 0.1:
@@ -270,7 +307,7 @@ try:
             
             if distance > 0.1 and edge==False:
                 Forward(speed, vel1, vel2)
-            
+                print('--------moving forward----------')
             elif turnDeg [len(bound[0])] == int(Pt[2]):
                 edge = True
                 Rotate(rotation_speed, vel1, vel2)
@@ -283,7 +320,7 @@ try:
             
             if len(bound[0]) == 4:
                 IdentifyBound = True
-
+                break
         elif 165 < x < 155:
             #rotate at 20 percent speed until it finds a ball
             Rotate(rotation_speed, vel1, vel2)
@@ -308,7 +345,7 @@ try:
 
 except KeyboardInterrupt:
     motor1.stop();
-    motor2.stop()
+    motor2.stop();
     cv2.destroyAllWindows()
     vs.stop()
 

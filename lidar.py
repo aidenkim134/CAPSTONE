@@ -6,7 +6,6 @@ ser = serial.Serial("/dev/serial0", 115200)
 
 def getTFminiData():
     while True:
-        time.sleep(0.1)
         count = ser.in_waiting
         if count > 8:
             recv = ser.read(9)   
@@ -17,12 +16,16 @@ def getTFminiData():
                 distance = distance / 100
                 print("current distance is {}m".format(distance))
                 ser.reset_input_buffer()
-                
+                return distance  
+            else:
+                distance = 0
+                return distance  
+            
 if __name__ == '__main__':
     try:
         if ser.is_open == False:
             ser.open()
-        getTFminiData()
+        print(getTFminiData())
     except KeyboardInterrupt:   
         if ser != None:
             ser.close()
