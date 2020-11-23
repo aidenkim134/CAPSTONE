@@ -47,7 +47,7 @@ time.sleep(3.0)
 
 rotation_speed= 30
 forward_speed = 30
-
+Ptb = 1000
 
 def getSpeed (pre_enc1, pre_enc2, Time):
     
@@ -259,6 +259,7 @@ clearRef = 2
 theta = []
 wait_time = 0 #ms
 direction = 0
+FoundBall = False
 try:
     while True:
         Time = time.time_ns() / 1E9
@@ -318,6 +319,7 @@ try:
         Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
     
         turnDeg = [90, 180, 270, 0]
+
         #if  IdentifyBound == False:
         
         if False:
@@ -360,37 +362,31 @@ try:
                 motor2.stop()
                 clearRef = 2
                 break
-            
-
-        elif 20 > x or  x > 300:
+        elif (20 > x or x > 300):
             if clearRef == 2:
                 w_PID1.clear(); w_PID2.clear()
-                w_PID1.Kd = 1; w_PID2.Kd = 1
                 clearRef = 3
-            #rotate at 20 percent speed until it finds a ball
-            if not(direction):
-                Rotate(3, vel1, vel2)
-                Ptb = Pt[2]
-                
-            if direction:
-                if Ptb < Pt[0]:
-                    RotateCC(3, vel1, vel2)
-                    print('rotate cc')
-          
             
-                
-
+            elif  (0 !=  round(Pt[2]-5, -1)%20):
+                if FoundBall == True:
+                    if Ptb < Pt[2]:
+                        RotateCC(15, vel1, vel2)
+                    else:
+                        Rotate(15, vel1, vel2)
+                else:
+                    Rotate(15, vel1, vel2)
+                i = 0
+            elif i < 100:
+                Forward(0, vel1, vel2)
+                i = i + 1
+        
         elif (20 < x < 300):
             if clearRef == 3:
                 w_PID1.clear(); w_PID2.clear()
-                w_PID1.Kp = 1.8; w_PID2.Kp = 1.8
                 clearRef = 2
-                direction = 1
-                speed = 0
-                
-                
-                
-            elif distance > 0.2:
+
+            Ptb = Pt[2]; FoundBall = True
+            if distance > 0.2:
                 speed = forward_speed
             elif distance <= 0.2:
                 speed = 0
@@ -404,6 +400,7 @@ try:
                     ballColor = 'blue';
                 if ballColor == 'blue':
                     ballColor = 'red';
+                
         theta.append(Pt[2])
                 
     plt.figure(1)
