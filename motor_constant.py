@@ -13,12 +13,16 @@ data = [[],[]]
 i = 0
 motor1.setPWM(0); motor1.backward()
 startTime = time.time_ns()
-while i < 50:
-    motor1.setPWM(80); motor1.forward()
+
+motor1.setPWM(100); motor1.forward ()
+while i < 500:
+    
     data[0].append(time.time_ns() - startTime); data[1].append(enc.read())
-    time.sleep(0.1)
+    time.sleep(0.001)
     print(i, enc.read())
     i = i + 1
+    
+
 
 
 motor1.setPWM(0); motor1.stop()

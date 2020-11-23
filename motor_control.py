@@ -4,7 +4,7 @@ import time
 class motorControl:
     def __init__(self, motor):
         self.motor = motor #en, out1, out2
-        self.frequency = 1000
+        self.frequency = 10000
         self.rotation = 0
         
         GPIO.setmode (GPIO.BCM)

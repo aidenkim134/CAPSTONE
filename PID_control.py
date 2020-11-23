@@ -4,12 +4,12 @@ class PID:
     """PID Controller
     """
 
-    def __init__(self, P=1, I=1.2, D=0.1, set_point=None):
+    def __init__(self, P=1.8, I=2.5, D=0.0000, set_point=None):
 
         self.Kp = P; self.Ki = I; self.Kd = D
 
-        self.sample_time = 0.1
-        self.current_time = time.time()
+        self.sample_time = 0.001
+        self.current_time = time.time_ns() / 1E9
         self.last_time = self.current_time
         self.SetPoint = set_point
 
@@ -23,7 +23,8 @@ class PID:
         self.ITerm = 0.0
         self.DTerm = 0.0
         self.last_error = 0.0
-
+        self.current_time = time.time_ns() / 1E9
+        self.last_time = self.current_time
         self.output = 0.0
 
     def update(self, feedback_value):
@@ -34,7 +35,7 @@ class PID:
         """
         error = self.SetPoint - feedback_value
 
-        self.current_time = time.time()
+        self.current_time = time.time_ns() / 1E9
         delta_time = self.current_time - self.last_time
         delta_error = error - self.last_error
 
