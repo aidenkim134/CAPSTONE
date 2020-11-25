@@ -4,7 +4,7 @@ class PID:
     """PID Controller
     """
 
-    def __init__(self, P=1.8, I=2.5, D=0.0000, set_point=None):
+    def __init__(self, P=1.8, I=2.5, D=0.03, set_point=None):
 
         self.Kp = P; self.Ki = I; self.Kd = D
 
@@ -14,6 +14,9 @@ class PID:
         self.SetPoint = set_point
 
         self.clear()
+        
+    def resetGain(self):
+        self.Ki=1.8; self.Ki=2.5; self.Kd=0.03
 
     def clear(self):
         """Clears PID computations and coefficients"""

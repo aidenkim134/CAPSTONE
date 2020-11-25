@@ -1,10 +1,11 @@
 import time
- 
+from picamera.array import PiRGBArray
+from picamera import PiCamera
 import cv2
 import numpy as np
 from imutils.video import VideoStream
 import imutils
- 
+
 # Are we using the Pi Camera?
 usingPiCamera = True
 # Set initial frame size.
@@ -12,7 +13,7 @@ frameSize = (320, 240)
  
 # Initialize mutithreading the video stream.
 vs = VideoStream(src=0, usePiCamera=usingPiCamera, resolution=frameSize,
-        framerate=10).start()
+        framerate=30).start()
 # Allow the camera to warm up.
 time.sleep(2.0)
  
@@ -24,7 +25,7 @@ while True:
     #colorLimit = [([50,50,0], [100, 100, 255])]
     colorLimit = [([0,0,80], [225, 70, 225])]
     colorLimit = [([30,0,60], [225, 60, 100])]
-    colorLimit = [([0,0,50], [70, 30, 255])]
+    colorLimit = [([0,0,80], [70, 20, 255])]
     # Get the next frame.
     vs.camera.zoom = (0.45, 0.45, 0.45, 0.45)
     frame = vs.read()
@@ -40,7 +41,7 @@ while True:
         
     #find circular image using edge finding and hough transform (circle)
     gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 5.5, 40)
+    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 4.5, 40)
     if began == False:
         preCircle = np.array([[0,0,0]])
         began = True
