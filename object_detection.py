@@ -64,8 +64,7 @@ def getTFminiData():
                 distance = distance / 100
                 #print("current distance is {}m".format(distance))
                 ser.reset_input_buffer()
-                if distance == 0:
-                    distance = 1E9         
+       
                 return distance  
             else:
                 distance = 1E9
@@ -73,7 +72,7 @@ def getTFminiData():
 
 def getPosition(Ldist, Rdist, Pt):
     '''obtain x, y, theta position based on encoder reading'''
-    D = 0.188 #m
+    D = 0.142 #m
     if Ldist != Rdist:
         r = D * (Ldist + Rdist) / 2 / np.abs(Rdist - Ldist)
         Pt[2] = (Rdist - Ldist) / D * 360 / (2*np.pi) + Pt[2]
@@ -91,7 +90,7 @@ def getPosition(Ldist, Rdist, Pt):
 def UpdatePt (Pt, pre_enc1, pre_enc2, Time):
     [vel1, vel2] = getSpeed(pre_enc1, pre_enc2, Time)
     #print ('actual speed is: {}, {}'.format(vel1, vel2))
-    rotation1 = vel1 * (2*np.pi) / 60 * (time.time_ns() / 1E9 - Time) *0.069 / 2 * 1.15 ; rotation2 = vel2 * (2*np.pi) / 60 *(time.time_ns() / 1E9 - Time) *0.069 / 2 * 1.133 
+    rotation1 = vel1 * (2*np.pi) / 60 * (time.time_ns() / 1E9 - Time) *0.069 / 2 * 1.15 ; rotation2 = vel2 * (2*np.pi) / 60 *(time.time_ns() / 1E9 - Time) *0.069 / 2 * 1.145 
 
     Pt = getPosition(rotation1, rotation2, Pt)
     return Pt
@@ -137,7 +136,7 @@ ballColor = 'red'
 Pt = [0,0,0]
 FoundBall = False
 clearRef = 0
-turnDeg = [90, 180, 270, 0]
+turnDeg = [80, 170, 260, 350]
 try:
     while IdentifyBound == False:
         Time = time.time_ns() / 1E9
