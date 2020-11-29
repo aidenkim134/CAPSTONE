@@ -74,7 +74,7 @@ def getPosition(Ldist, Rdist, Pt):
     '''obtain x, y, theta position based on encoder reading'''
     D = 0.142 #m
     if Ldist != Rdist:
-        r = D * (Ldist + Rdist) / 2 / np.abs(Rdist - Ldist)
+        r = D * (Ldist + Rdist) / 2 / (Rdist - Ldist)
         Pt[2] = (Rdist - Ldist) / D * 360 / (2*np.pi) + Pt[2]
         Pt[0] = r * np.cos(Pt[2] *2*np.pi / 360) + Pt[0]
         Pt[1] = r * np.sin(Pt[2]*2*np.pi / 360) + Pt[1]
@@ -90,7 +90,7 @@ def getPosition(Ldist, Rdist, Pt):
 def UpdatePt (Pt, pre_enc1, pre_enc2, Time):
     [vel1, vel2] = getSpeed(pre_enc1, pre_enc2, Time)
     #print ('actual speed is: {}, {}'.format(vel1, vel2))
-    rotation1 = vel1 * (2*np.pi) / 60 * (time.time_ns() / 1E9 - Time) *0.069 / 2 * 1.15 ; rotation2 = vel2 * (2*np.pi) / 60 *(time.time_ns() / 1E9 - Time) *0.069 / 2 * 1.145 
+    rotation1 = vel1 * (2*np.pi) / 60 * (time.time_ns() / 1E9 - Time) *0.069 / 2 * 1.15 ; rotation2 = vel2 * (2*np.pi) / 60 *(time.time_ns() / 1E9 - Time) *0.069 / 2 * 1.13 
 
     Pt = getPosition(rotation1, rotation2, Pt)
     return Pt
@@ -139,6 +139,7 @@ clearRef = 0
 turnDeg = [80, 170, 260, 350]
 try:
     while IdentifyBound == False:
+        break
         Time = time.time_ns() / 1E9
         pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
         time.sleep(0.01)
@@ -146,10 +147,7 @@ try:
         distance = getTFminiData()
         if distance == 0:
             distance = 1E9
-        Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
             
-        turnDeg = [90, 180, 270, 0]
-    
         if distance > 0.2:
             speed = forward_speed
         if distance <= 0.2:
@@ -182,16 +180,16 @@ try:
                 IdentifyBound = True
                 motor1.stop()
                 motor2.stop()
-    
-                
-    
+        Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
+    Pt = [0,0,0]          
+    p = []
     while True:
         '''Locating the ball'''
         rotationAng = np.linspace(10, 100,19)
         direction = 'clockwise'
         Reference = 0
         began = False
-        while getTFminiData() < 0.2:
+        while True:
             clearRef = 0
             while FoundBall == False:
                 Time = time.time_ns() / 1E9
@@ -203,7 +201,7 @@ try:
             
                 time.sleep(0.01)
                 [vel1, vel2] = getSpeed(pre_enc1, pre_enc2, Time)
-                Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
+                
             
                 vs.camera.zoom = (0.45, 0.45, 0.45, 0.45)
                 frame = vs.read()
@@ -230,14 +228,12 @@ try:
                     preCircle = circles.copy()
                 except:
                         circles = [[0,0,0]]
-                        
-            
-            
+
                 for (x, y, r) in circles:
                     cv2.circle(frame, (x,y), r, (0, 225, 0), 4)
                     cv2.rectangle(frame, (x-2, y-2), (x+2, y+2), (0, 128, 225), -1)
                     break
-                
+                p.append(Pt[2])
                 # Show video stream
                 cv2.imshow('orig', frame)
                 key = cv2.waitKey(1) & 0xFF
@@ -246,11 +242,12 @@ try:
                 if key == ord("q"):
                     break
                 
-            
-                if Pt[2] > rotationAng[-1]:
-                    direction =='counter clockwise'
-                if Pt[2] < rotationAng[0] or Pt[2] > 300:
-                    direction =='clockwise'
+                
+                if Pt[2] > rotationAng[-1] or Reference == 18:
+                    direction ='counter clockwise'
+        
+                elif Pt[2] < rotationAng[0] or Pt[2] > 300 or Reference == 0:
+                    direction ='clockwise'
             
                     
                 if (80 > round(x, -1) or round(x, -1) > 240):
@@ -259,24 +256,28 @@ try:
                         clearRef = 1
                     if direction == 'clockwise':
                         if  (rotationAng[int(Reference)] > Pt[2] or Pt[2] > 300):
-                            Rotate(5, vel1, vel2)
+                            Rotate(0.1, vel1, vel2)
                         else:
                             Stop(motor1, motor2)
-                            Reference = Reference + 1 / 10
+                            Reference = Reference + 1 / 2
                             clearRef = 0
                             
-                    if direction == 'counter clockwise':
-                        if  (rotationAng[int(Reference)] > Pt[2]):
-                            RotateCC(5, vel1, vel2)
+                    elif direction == 'counter clockwise':
+                        if  (rotationAng[int(Reference)] < Pt[2]):
+                            RotateCC(0.1, vel1, vel2)
                         else:
                             Stop(motor1, motor2)
-                            Reference = Reference - 1 / 10
+                            
+                            Reference = Reference - 1 / 2
                             clearRef = 0
                         
                 else:
                     FoundBall = True
-                    
+                    Ptb = Pt
+
+                Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
             clearRef = 0
+            Reference = 0
             while FoundBall == True:
                 
                 Time = time.time_ns() / 1E9
@@ -288,28 +289,29 @@ try:
                 if clearRef == 0:
                         w_PID1.clear(); w_PID2.clear()
                         clearRef = 1
-                        Ptb = Pt;
+                        
                 
                 speed = 20
                 Forward(speed, vel1, vel2)
                 
-                if Ptb[2] > Pt[2] + 10:
+                if Ptb[2] > Pt[2] + 3:
                     direction = 'clockwise'
                     FoundBall = False
                 
-                if Ptb[2] < Pt[2] - 10:
+                if Ptb[2] < Pt[2] - 3:
                     direction = 'counter clockwise'
                     FoundBall = False
-            
-    
-        
-    
+                
+                Exit = False
+                if getTFminiData() < 0.2:
+                    break
+                    Exit = True
+            break
         '''Once the object reaches the ball'''
         
         #first rotate  and position to align with the claw
         Pto = Pt.copy()
         clear = True
-        
         while 220 != round(abs(Pt[2] - Pto[2]), -1):
             Time = time.time_ns() / 1E9
             pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
@@ -339,6 +341,7 @@ try:
             Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
             
         Stop(motor1, motor2)
+        break
         #close the claw to get a hold of the ball
         claw.clawClose()
         
