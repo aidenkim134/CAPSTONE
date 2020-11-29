@@ -227,12 +227,12 @@ try:
         Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
     Pt = [0,0,0]          
     p = []
+    began = False
+    direction = 'clockwise'
+    Reference = 0
     while True:
         '''Locating the ball'''
         rotationAng = np.linspace(10, 100,19)
-        direction = 'clockwise'
-        Reference = 0
-        began = False
         delay = 0
         while True:
             clearRef = 0
@@ -288,6 +288,12 @@ try:
                 
                 Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
                 p.append(Pt[2])
+                
+                distance = getTFminiData()
+                if distance < 0.25:
+                    Stop(motor1, motor2)
+                    Exit = True
+                    break
             if Exit == True:
                 Stop(motor1, motor2)
                 break
@@ -330,9 +336,11 @@ try:
    
                 Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
                 p.append(Pt[2])
-                
-                
-                
+                distance = getTFminiData()
+                if distance < 0.25:
+                    Stop(motor1, motor2)
+                    Exit = True
+                    break
             if Exit == True:
                 Stop(motor1, motor2)
                 break
