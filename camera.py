@@ -61,12 +61,11 @@ while True:
     
     # Show video stream
     cv2.imshow('orig', frame)
-    cv2.imwrite('blue.png', frame)
-    key = cv2.waitKey(1) & 0xFF
- 
-    # if the `q` key was pressed, break from the loop.
-    if key == ord("q"):
-        break
+    key = cv2.waitKey(1) & 0XFF
+    
+    
+
+
     
 #    print(1/(time.time() - timeCheck))
 #    timeCheck = time.time()

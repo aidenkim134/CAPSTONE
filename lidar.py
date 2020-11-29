@@ -5,6 +5,8 @@ import time
 ser = serial.Serial("/dev/serial0", 115200)
 
 def getTFminiData():
+    
+    
     while True:
         count = ser.in_waiting
         if count > 8:
@@ -23,9 +25,11 @@ def getTFminiData():
             
 if __name__ == '__main__':
     try:
-        if ser.is_open == False:
-            ser.open()
-        print(getTFminiData())
+        while True:
+            time.sleep(0.1)
+            if ser.is_open == False:
+                ser.open()
+            print(getTFminiData())
     except KeyboardInterrupt:   
         if ser != None:
             ser.close()
