@@ -95,7 +95,54 @@ def UpdatePt (Pt, pre_enc1, pre_enc2, Time):
     Pt = getPosition(rotation1, rotation2, Pt)
     return Pt
 
+def Camera(ballColor, began):
+    if ballColor == 'red':
+        colorLimit = [([0,0,80], [70, 20, 255])]
+    if ballColor == 'blue':
+        colorLimit = [([0,0,0], [50, 40, 200])]
 
+    time.sleep(0.01)
+    [vel1, vel2] = getSpeed(pre_enc1, pre_enc2, Time)
+    
+
+    vs.camera.zoom = (0.45, 0.45, 0.45, 0.45)
+    frame = vs.read()
+    #only take red or blue color
+    for (lower, upper) in colorLimit:
+        lower = np.array(lower, dtype='uint8')
+        upper = np.array(upper, dtype='uint8')
+        
+        mask = cv2.inRange(frame, lower, upper)
+        frame = cv2.bitwise_and(frame, frame, mask=mask)
+        
+    #find circular image using edge finding and hough transform (circle)
+    gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+
+    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 3.5, 80)
+
+    if began == False:
+        preCircle = np.array([[0,0,0]])
+        began = True
+    
+    try:
+        circles = np.round(circles[0, :]).astype(int)
+        preCircle = circles.copy()
+    except:
+            circles = [[0,0,0]]
+
+    for (x, y, r) in circles:
+        cv2.circle(frame, (x,y), r, (0, 225, 0), 4)
+        cv2.rectangle(frame, (x-2, y-2), (x+2, y+2), (0, 128, 225), -1)
+        break
+    p.append(Pt[2])
+    # Show video stream
+    cv2.imshow('orig', frame)
+    return x
+
+    
+    
+    
+    return x
 def Rotate(speed, vel1, vel2):
     w_PID1.SetPoint = speed; w_PID2.SetPoint = speed; 
     w_PID1.update(vel1) ; w_PID2.update(vel2)
@@ -194,55 +241,8 @@ try:
             while FoundBall == False:
                 Time = time.time_ns() / 1E9
                 pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
-                if ballColor == 'red':
-                    colorLimit = [([0,0,80], [70, 20, 255])]
-                if ballColor == 'blue':
-                    colorLimit = [([0,0,0], [50, 40, 200])]
-            
-                time.sleep(0.01)
-                [vel1, vel2] = getSpeed(pre_enc1, pre_enc2, Time)
-                
-                ''''''''''''''''''''''''
-                vs.camera.zoom = (0.45, 0.45, 0.45, 0.45)
-                frame = vs.read()
-                view = frame.copy()
-                #only take red or blue color
-                for (lower, upper) in colorLimit:
-                    lower = np.array(lower, dtype='uint8')
-                    upper = np.array(upper, dtype='uint8')
-                    
-                    mask = cv2.inRange(frame, lower, upper)
-                    frame = cv2.bitwise_and(frame, frame, mask=mask)
-                    
-                #find circular image using edge finding and hough transform (circle)
-                gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-            
-                circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 3.5, 80)
-            
-                if began == False:
-                    preCircle = np.array([[0,0,0]])
-                    began = True
-                
-                try:
-                    circles = np.round(circles[0, :]).astype(int)
-                    preCircle = circles.copy()
-                except:
-                        circles = [[0,0,0]]
 
-                for (x, y, r) in circles:
-                    cv2.circle(frame, (x,y), r, (0, 225, 0), 4)
-                    cv2.rectangle(frame, (x-2, y-2), (x+2, y+2), (0, 128, 225), -1)
-                    break
-                p.append(Pt[2])
-                # Show video stream
-                cv2.imshow('orig', frame)
-                key = cv2.waitKey(1) & 0xFF
-                ''''''''''''''''''''''''''''''''''''''''''
-             
-                # if the `q` key was pressed, break from the loop.
-                if key == ord("q"):
-                    break
-                
+                x = Camera(ballColor, began)
                 
                 if Pt[2] > rotationAng[-1] or Reference == 18:
                     direction ='counter clockwise'
@@ -257,7 +257,7 @@ try:
                         clearRef = 1
                     if direction == 'clockwise':
                         if  (rotationAng[int(Reference)] > Pt[2] or Pt[2] > 300):
-                            Rotate(1, vel1, vel2)
+                            Rotate(0.1, vel1, vel2)
                         else:
                             Stop(motor1, motor2)
                             Reference = Reference + 1 / 2
@@ -265,7 +265,7 @@ try:
                             
                     elif direction == 'counter clockwise':
                         if  (rotationAng[int(Reference)] < Pt[2]):
-                            RotateCC(1, vel1, vel2)
+                            RotateCC(0.1, vel1, vel2)
                         else:
                             Stop(motor1, motor2)
                             
@@ -278,51 +278,14 @@ try:
 
                 Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
             clearRef = 0
-            Reference = 0
             while FoundBall == True:
                 
                 Time = time.time_ns() / 1E9
                 pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
                 time.sleep(0.01)
                 [vel1, vel2] = getSpeed(pre_enc1, pre_enc2, Time)
+                Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
                 
-                ''''''''''''''''''''''''''''''
-                vs.camera.zoom = (0.45, 0.45, 0.45, 0.45)
-                frame = vs.read()
-                view = frame.copy()
-                #only take red or blue color
-                for (lower, upper) in colorLimit:
-                    lower = np.array(lower, dtype='uint8')
-                    upper = np.array(upper, dtype='uint8')
-                    
-                    mask = cv2.inRange(frame, lower, upper)
-                    frame = cv2.bitwise_and(frame, frame, mask=mask)
-                    
-                #find circular image using edge finding and hough transform (circle)
-                gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-            
-                circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 3.5, 80)
-            
-                if began == False:
-                    preCircle = np.array([[0,0,0]])
-                    began = True
-                
-                try:
-                    circles = np.round(circles[0, :]).astype(int)
-                    preCircle = circles.copy()
-                except:
-                        circles = [[0,0,0]]
-
-                for (x, y, r) in circles:
-                    cv2.circle(frame, (x,y), r, (0, 225, 0), 4)
-                    cv2.rectangle(frame, (x-2, y-2), (x+2, y+2), (0, 128, 225), -1)
-                    break
-                p.append(Pt[2])
-                # Show video stream
-                cv2.imshow('orig', frame)
-                key = cv2.waitKey(1) & 0xFF
-                ''''''''''''''''''''''''''''''''''''''''''''
-
                 if clearRef == 0:
                         w_PID1.clear(); w_PID2.clear()
                         clearRef = 1
@@ -338,24 +301,19 @@ try:
                 if Ptb[2] < Pt[2] - 3:
                     direction = 'counter clockwise'
                     FoundBall = False
-                    
-                if (10 > round(x, -1) or round(x, -1) > 310):
-                    FoundBall = False
-                    
-                Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
-                
                 
                 Exit = False
                 if getTFminiData() < 0.2:
+                    Exit = True
                     break
-                    
-            break
+            if Exit == True:        
+                break
         '''Once the object reaches the ball'''
-        
+        break
         #first rotate  and position to align with the claw
         Pto = Pt.copy()
         clear = True
-        while 180 != round(abs(Pt[2] - Pto[2]), -1):
+        while 220 != round(abs(Pt[2] - Pto[2]), -1):
             Time = time.time_ns() / 1E9
             pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
             time.sleep(0.01)
