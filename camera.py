@@ -26,6 +26,8 @@ while True:
     colorLimit = [([0,0,80], [225, 70, 225])]
     colorLimit = [([30,0,60], [225, 60, 100])]
     colorLimit = [([0,0,80], [70, 20, 255])]
+    colorLimit = [([0,20,0], [255, 40, 50])]
+
     # Get the next frame.
     vs.camera.zoom = (0.45, 0.45, 0.45, 0.45)
     frame = vs.read()
