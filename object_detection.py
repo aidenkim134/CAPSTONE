@@ -36,7 +36,7 @@ ser = serial.Serial("/dev/serial0", 115200)
 
 '''define camera object to begin streaming'''
 usingPiCamera = True
-frameSize = (640, 480)
+frameSize = (320, 240)
 
 vs = VideoStream(src=0, usePiCamera=usingPiCamera, resolution=frameSize,
         framerate=30).start()
@@ -53,7 +53,8 @@ def getSpeed (pre_enc1, pre_enc2, Time):
 
 
 def getTFminiData():
-    while True:
+    i = 1
+    while i < 500:
         count = ser.in_waiting
         if count > 8:
             recv = ser.read(9)   
@@ -64,15 +65,13 @@ def getTFminiData():
                 distance = distance / 100
                 #print("current distance is {}m".format(distance))
                 ser.reset_input_buffer()
-       
                 return distance  
-            else:
-                distance = 1E9
-                return distance  
+        i = i + 1
+    return 1E9
 
 def getPosition(Ldist, Rdist, Pt):
     '''obtain x, y, theta position based on encoder reading'''
-    D = 0.138 #m
+    D = 0.156 #m
     if Ldist != Rdist:
         r = D * (Ldist + Rdist) / 2 / (Rdist - Ldist)
         Pt[2] = (Rdist - Ldist) / D * 360 / (2*np.pi) + Pt[2]
@@ -94,10 +93,10 @@ def UpdatePt (Pt, pre_enc1, pre_enc2, Time):
 
     Pt = getPosition(rotation1, rotation2, Pt)
     return Pt
-
+p = []
 def Camera(ballColor, began):
     if ballColor == 'red':
-        colorLimit = [([0,0,80], [70, 30, 255])]
+        colorLimit = [([0,0,80], [70, 20, 255])]
     if ballColor == 'blue':
         colorLimit = [([0,0,0], [50, 40, 200])]
 
@@ -180,17 +179,20 @@ ballColor = 'red'
 Pt = [0,0,0]
 FoundBall = False
 clearRef = 0
-turnDeg = [80, 170, 260, 350]
+turnDeg = [90, 190, 280, 30]
 try:
     while IdentifyBound == False:
-        break
+        
         Time = time.time_ns() / 1E9
         pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
         time.sleep(0.01)
         [vel1, vel2] = getSpeed(pre_enc1, pre_enc2, Time)
         distance = getTFminiData()
-        if distance == 0:
-            distance = 1E9
+        if distance == 1E9:
+            Stop(motor1, motor2)
+            w_PID1.clear(); w_PID2.clear()
+            continue
+
             
         if distance > 0.2:
             speed = forward_speed
@@ -225,34 +227,38 @@ try:
                 motor1.stop()
                 motor2.stop()
         Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
-    Pt = [0,0,0]          
-    p = []
+        
+             
+    
     began = False
     direction = 'clockwise'
     Reference = 0
     while True:
         '''Locating the ball'''
-        rotationAng = np.linspace(10, 100,19)
+        rotationAng = np.linspace(5, 100,19)
         delay = 0
         while True:
             clearRef = 0
             d = []
             while FoundBall == False:
-            
                 
-                Time = time.time_ns() / 1E9
-                pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
-                time.sleep(0.1)
-                Exit = False
-                ser = serial.Serial("/dev/serial0", 115200)
                 distance = getTFminiData()
-                if distance < 0.25:
+                if distance < 0.2:
                     Stop(motor1, motor2)
                     Exit = True
                     break
+                if distance == 1E9:
+                    Stop(motor1, motor2)
+                    clearRef = 0
+                
+                Time = time.time_ns() / 1E9
+                pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
+                time.sleep(0.01)
+                Exit = False
+
                 [vel1, vel2] = getSpeed(pre_enc1, pre_enc2, Time)
                 x = Camera(ballColor, began)
-                d.append(distance)
+ 
                 if (Pt[2] > rotationAng[-1] or Reference == 18) and Pt[2] < 300:
                     direction ='counter clockwise'
                     Reference = 18        
@@ -261,13 +267,13 @@ try:
                     Reference = 0
             
                     
-                if (10 > round(x, -1) or round(x, -1) > 310):
+                if (60 > round(x, -1) or round(x, -1) > 270):
                     if clearRef == 0:
                         w_PID1.clear(); w_PID2.clear()
                         clearRef = 1
                     if direction == 'clockwise':
                         if  (rotationAng[int(Reference)] > Pt[2] or Pt[2] > 300):
-                            Rotate(0.1, vel1, vel2)
+                            Rotate(5, vel1, vel2)
                         else:
                             Stop(motor1, motor2)
                             Reference = Reference + 1 / 2
@@ -275,7 +281,7 @@ try:
                             
                     if direction == 'counter clockwise':
                         if  (rotationAng[int(Reference)] < Pt[2]) and Pt[2] < 300:
-                            RotateCC(0.1, vel1, vel2)
+                            RotateCC(5, vel1, vel2)
                         else:
                             Stop(motor1, motor2)
                             
@@ -285,38 +291,36 @@ try:
                 else:
                     FoundBall = True
                     Ptb = Pt
-                
+            
                 Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
                 p.append(Pt[2])
-                
-                distance = getTFminiData()
-                if distance < 0.25:
-                    Stop(motor1, motor2)
-                    Exit = True
-                    break
+            
+
+            
             if Exit == True:
                 Stop(motor1, motor2)
                 break
             clearRef = 0
             x = 0
             while FoundBall == True:
-
-                Time = time.time_ns() / 1E9
-                pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
-                time.sleep(0.1)
-                Exit = False
-                ser = serial.Serial("/dev/serial0", 115200)
                 distance = getTFminiData()
-                if distance < 0.25:
+                if distance < 0.15:
                     Stop(motor1, motor2)
                     Exit = True
                     break
+                if distance == 1E9:
+                    Stop(motor1, motor2)
+                    clearRef = 0
+                Time = time.time_ns() / 1E9
+                pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
+                time.sleep(0.01)
+                Exit = False
                 [vel1, vel2] = getSpeed(pre_enc1, pre_enc2, Time)
                 d.append(distance)
                 
                 if clearRef == 0:
-                        w_PID1.clear(); w_PID2.clear()
-                        clearRef = 1
+                    w_PID1.clear(); w_PID2.clear()
+                    clearRef = 1
                         
 
                 x_prime = Camera(ballColor, began)
@@ -326,30 +330,26 @@ try:
                     delay = 0
                     x = x_prime
                 print(delay)  
-                if delay > 4:
+                if delay > 6:
                     delay = 0
                     x = x_prime
                     FoundBall = False
-                    
-                speed = 10
+
+                speed = 8
                 Forward(speed, vel1, vel2)
    
                 Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
                 p.append(Pt[2])
-                distance = getTFminiData()
-                if distance < 0.25:
-                    Stop(motor1, motor2)
-                    Exit = True
-                    break
+
             if Exit == True:
                 Stop(motor1, motor2)
                 break
         '''Once the object reaches the ball'''
 
         #first rotate  and position to align with the claw
-        Pto = Pt.copy()
+        Pto = [0,0,0]
         clear = True
-        while 150 != round(abs(Pt[2] - Pto[2])-5, -1):
+        while 60 != round(Pto[2]-5, -1):
             Time = time.time_ns() / 1E9
             pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
             time.sleep(0.01)
@@ -358,15 +358,16 @@ try:
                 clear = False
                 
             [vel1, vel2] = getSpeed(pre_enc1, pre_enc2, Time)
-            RotateCC(8, vel1, vel2)
+            RotateCC(5, vel1, vel2)
             Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
+            Pto = UpdatePt(Pto, pre_enc1, pre_enc2, Time)
             p.append(Pt[2])   
         Stop(motor1, motor2)
         time.sleep(1)
 
         #Move backward slightly to enclose the ball with claw
         clear = True
-        while np.sqrt((Pt[0] - Pto[0])**2 + (Pt[1] - Pto[1])**2) < 40:
+        while np.sqrt((Pto[0])**2 + (Pto[1])**2) < distance * 150:
             Time = time.time_ns() / 1E9
             pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
             time.sleep(0.01)
@@ -376,19 +377,20 @@ try:
             [vel1, vel2] = getSpeed(pre_enc1, pre_enc2, Time)
             Backward(5, vel1, vel2)
             Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
+            Pto = UpdatePt(Pto, pre_enc1, pre_enc2, Time)
             p.append(Pt[2])
         Stop(motor1, motor2)
         time.sleep(1)
         #close the claw to get a hold of the ball
-        #claw.clawClose()
+        claw.clawClose()
         
         '''Transporting the ball to the respective locations'''
         
         #Find the edge perpendicular the location of inventory
         if ballColor == 'red':
-            wall = 260; gate = 0; pos = -80#pos = bound[3][0]
+            wall = 240; gate = 330; pos = bound[0][3]-20#pos = bound[3][0]
         if ballColor == 'blue':
-            wall = 90; gate = 180; pos = bound[1][0]
+            wall = 90; gate = 180; pos = bound[1][1]
         
         clear = True
         while wall != round(Pt[2], -1):
@@ -407,11 +409,11 @@ try:
         
         #run through the lidar few times to prevent erroneous data
         i = 0
-        while i < 100:
+        while i < 10:
             time.sleep(0.1)
             distance = getTFminiData()
             i = i + 1
-            distance = 1E9
+ 
         
         #move forward until reaching the edge perpendicular to inventory
         clear = True
@@ -431,10 +433,7 @@ try:
             if distance == 0:
                 distance = 1E9
         Stop(motor1, motor2)  
-        plt.figure()
-        plt.plot(p)
-        plt.show()
-        break
+
         #Turn to face away from the inventory
         clear = True
         while gate != round(Pt[2], -1):
@@ -448,10 +447,22 @@ try:
             Rotate(rotation_speed, vel1, vel2)
             Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
         Stop(motor1, motor2)
-        
+        time.sleep(1)
         #move to the inventory
+        while i < 10:
+            time.sleep(0.1)
+            distance = getTFminiData()
+            i = i + 1
+        distance = 0
+        
         clear = True
-        while Pt[0] > pos:
+        while distance < 1.1 :
+            distance = getTFminiData()
+            if distance == 1E9:
+                Stop(motor1, motor2)
+                w_PID1.clear(); w_PID2.clear()
+                distance = 0
+                    
             Time = time.time_ns() / 1E9
             pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
             time.sleep(0.01)
@@ -466,6 +477,10 @@ try:
         
         #open the claw to release the ball
         claw.clawOpen()
+        plt.figure()
+        plt.plot(p)
+        plt.show()
+        break
         
         if ballColor == 'red':
             ballColor = 'blue';
