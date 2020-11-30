@@ -180,6 +180,7 @@ Pt = [0,0,0]
 FoundBall = False
 clearRef = 0
 turnDeg = [90, 190, 280, 30]
+
 try:
     while IdentifyBound == False:
         
@@ -228,15 +229,17 @@ try:
                 motor2.stop()
         Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
         
-             
-    
-    began = False
-    direction = 'clockwise'
-    Reference = 0
+
     while True:
         '''Locating the ball'''
         rotationAng = np.linspace(5, 100,19)
         delay = 0
+        
+        began = False
+        direction = 'clockwise'
+        Reference = 0
+        
+        
         while True:
             clearRef = 0
             d = []
@@ -266,7 +269,6 @@ try:
                     direction ='clockwise'
                     Reference = 0
             
-                    
                 if (60 > round(x, -1) or round(x, -1) > 270):
                     if clearRef == 0:
                         w_PID1.clear(); w_PID2.clear()
@@ -328,8 +330,7 @@ try:
                     delay = delay + 1
                 else:
                     delay = 0
-                    x = x_prime
-                print(delay)  
+                    x = x_prime  
                 if delay > 6:
                     delay = 0
                     x = x_prime
@@ -344,6 +345,8 @@ try:
             if Exit == True:
                 Stop(motor1, motor2)
                 break
+        
+        
         '''Once the object reaches the ball'''
 
         #first rotate  and position to align with the claw
@@ -448,6 +451,7 @@ try:
             Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
         Stop(motor1, motor2)
         time.sleep(1)
+        
         #move to the inventory
         while i < 10:
             time.sleep(0.1)
@@ -456,7 +460,7 @@ try:
         distance = 0
         
         clear = True
-        while distance < 1.1 :
+        while distance < 1.2 :
             distance = getTFminiData()
             if distance == 1E9:
                 Stop(motor1, motor2)
@@ -474,18 +478,43 @@ try:
         
             Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
         Stop(motor1, motor2)
+        claw.clawOpen()
+        
+        
+        
+        while i < 10:
+            time.sleep(0.1)
+            distance = getTFminiData()
+            i = i + 1
+        distance = 0
+        
+        clear = True
+        while distance > 1.1:
+            distance = getTFminiData()
+            if distance == 1E9:
+                Stop(motor1, motor2)
+                w_PID1.clear(); w_PID2.clear()
+                distance = 0
+                
+            Time = time.time_ns() / 1E9
+            pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
+            time.sleep(0.01)
+            if clear:
+                w_PID1.clear(); w_PID2.clear()
+                clear = False
+            [vel1, vel2] = getSpeed(pre_enc1, pre_enc2, Time)
+            Backward(forward_speed, vel1, vel2)
+        
+            Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
+        Stop(motor1, motor2)
+            
         
         #open the claw to release the ball
-        claw.clawOpen()
-        plt.figure()
-        plt.plot(p)
-        plt.show()
-        break
-        
         if ballColor == 'red':
             ballColor = 'blue';
         if ballColor == 'blue':
             ballColor = 'red';
+            
 except KeyboardInterrupt:
     Stop(motor1, motor2)
     cv2.destroyAllWindows()
@@ -499,318 +528,7 @@ except KeyboardInterrupt:
 
 
 
-# def GrabBall(Pt, ballColor, bound):
 
-#     Pto = Pt.copy()
-
-#     clear = True
- 
-#     while 220 != round(abs(Pt[2] - Pto[2]), -1):
-#         Time = time.time_ns() / 1E9
-#         pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
-#         time.sleep(0.01)
-#         if clear:
-#             w_PID1.clear(); w_PID2.clear()
-#             w_PID1.Ki = 10.5; w_PID2.Ki = 10.5
-#             w_PID1.Kp = 0.3; w_PID2.Kp = 0.3
-#             clear = False
-#         [vel1, vel2] = getSpeed(pre_enc1, pre_enc2, Time)
-#         RotateCC(20, vel1, vel2)
-#         Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
-        
-#     Stop(motor1, motor2)
-#     time.sleep(1)
-#     clear = True
-#     while np.sqrt((Pt[0] - Pto[0])**2 + (Pt[1] - Pto[1])**2) < 55:
-#         Time = time.time_ns() / 1E9
-#         pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
-#         time.sleep(0.01)
-#         if clear:
-#             w_PID1.clear(); w_PID2.clear()
-#             clear = False
-#         [vel1, vel2] = getSpeed(pre_enc1, pre_enc2, Time)
-#         Backward(20, vel1, vel2)
-#         Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
-    
-#     Stop(motor1, motor2)
-#     claw.clawClose()
-
-#     if ballColor == 'red':
-#         clear = True
-#         while 260 != round(Pt[2], -1):
-           
-#             Time = time.time_ns() / 1E9
-#             pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
-#             time.sleep(0.01)
-#             if clear:
-#                 w_PID1.clear(); w_PID2.clear()
-#                 clear = False
-#             [vel1, vel2] = getSpeed(pre_enc1, pre_enc2, Time)
-#             Rotate(8, vel1, vel2)
-#             Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
-#         Stop(motor1, motor2)
-    
-#         clear = True
-
-#         i = 0
-#         while i < 100:
-#             time.sleep(0.001)
-#             distance = getTFminiData()
-#             i = i + 1
-#         distance = 1E9
-#         while distance > 0.2:
-#             print(distance)
-#             Time = time.time_ns() / 1E9
-#             pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
-#             time.sleep(0.01)
-#             if clear:
-#                 w_PID1.clear(); w_PID2.clear()
-#                 w_PID1.resetGain(); w_PID2.resetGain()
-#                 clear = False
-#             [vel1, vel2] = getSpeed(pre_enc1, pre_enc2, Time)
-#             Forward(forward_speed, vel1, vel2)
-#             Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
-#             distance = getTFminiData()
-#             if distance == 0:
-#                 distance = 1E9
-#         Stop(motor1, motor2)  
-        
-#         clear = True
-#         while 0 != round(Pt[2], -1):
-#             Time = time.time_ns() / 1E9
-#             pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
-#             time.sleep(0.01)
-#             if clear:
-#                 w_PID1.clear(); w_PID2.clear()
-#                 clear = False
-#             [vel1, vel2] = getSpeed(pre_enc1, pre_enc2, Time)
-#             Rotate(rotation_speed, vel1, vel2)
-#             Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
-#         Stop(motor1, motor2)
-#         print(Pt[2])
-#         clear = True
-#         while Pt[0] > -100:
-            
-#             Time = time.time_ns() / 1E9
-#             pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
-#             time.sleep(0.01)
-#             if clear:
-#                 w_PID1.clear(); w_PID2.clear()
-#                 clear = False
-#             [vel1, vel2] = getSpeed(pre_enc1, pre_enc2, Time)
-#             Backward(forward_speed, vel1, vel2)
-
-#             Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
-#         Stop(motor1, motor2)
-#         print(Pt)
-#         claw.clawOpen()
-#         return
-            
-#     if ballColor == 'blue':
-#         while (268 > Pt[2] or 272 < Pt[2]):
-#             time.sleep(0.1)
-#             Rotate(motor1, motor2, 40)
-#             Pt = UpdatePt (Pt)
-#         Stop(motor1, motor2)
-        
-#         while getTFminiData() > 0.1:
-#             time.sleep(0.1)
-#             Forward(motor1, motor2, 80)
-#             Pt = UpdatePt (Pt)
-#         Stop(motor1, motor2)
-        
-#         while (182 < Pt[2]):
-#             time.sleep(0.1)
-#             Rotate(motor1, motor2, 40)
-#             Pt = UpdatePt (Pt) 
-#         Stop(motor1, motor2)
-        
-#         while Pt[0] < bound[0]:
-#             time.sleep(0.1)
-#             Backward(motor1, motor2, 80)
-#             Pt = UpdatePt (Pt) 
-#         Stop(motor1, motor2)
-        
-#         claw.open()
-
-
-
-
-
-
-
-# try:
-#     while True:
-#         Time = time.time_ns() / 1E9
-#         pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
-#         if ballColor == 'red':
-#             colorLimit = [([0,0,80], [70, 20, 255])]
-#         if ballColor == 'blue':
-#             colorLimit = [([0,0,0], [50, 40, 200])]
-            
-#         time.sleep(0.01)
-#         [vel1, vel2] = getSpeed(pre_enc1, pre_enc2, Time)
-    
-#         # Get the next frame.
-#         vs.camera.zoom = (0.45, 0.45, 0.45, 0.45)
-#         frame = vs.read()
-#         view = frame.copy()
-#         #only take red or blue color
-#         for (lower, upper) in colorLimit:
-#             lower = np.array(lower, dtype='uint8')
-#             upper = np.array(upper, dtype='uint8')
-            
-#             mask = cv2.inRange(frame, lower, upper)
-#             frame = cv2.bitwise_and(frame, frame, mask=mask)
-            
-#         #find circular image using edge finding and hough transform (circle)
-#         gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-
-#         circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 3.5, 80)
-
-#         if began == False:
-#             preCircle = np.array([[0,0,0]])
-#             began = True
-        
-#         try:
-#             circles = np.round(circles[0, :]).astype(int)
-#             preCircle = circles.copy()
-#         except:
-#                 circles = [[0,0,0]]
-                
-
-
-#         for (x, y, r) in circles:
-#             cv2.circle(frame, (x,y), r, (0, 225, 0), 4)
-#             cv2.rectangle(frame, (x-2, y-2), (x+2, y+2), (0, 128, 225), -1)
-#             break
-        
-#         # Show video stream
-#         cv2.imshow('orig', frame)
-#         key = cv2.waitKey(1) & 0xFF
-     
-#         # if the `q` key was pressed, break from the loop.
-#         if key == ord("q"):
-#             break
-
-        
-#         distance = getTFminiData()
-#         if distance == 0:
-#             distance = 1E9
-#         Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
-    
-#         turnDeg = [90, 180, 270, 0]
-
-#         #if  IdentifyBound == False:
-        
-#         if False:
-            
-#             if distance > 0.2:
-#                 speed = forward_speed
-#             if distance <= 0.2:
-#                 speed = 0
-
-#             if distance > 0.2 and edge==False:
-#                 if clearRef == 0:
-#                     w_PID1.clear(); w_PID2.clear()
-#                     clearRef = 1
-               
-#                 Forward(speed, vel1, vel2)
-
-                
-#             elif  (turnDeg [len(bound[0])] !=  round(Pt[2]-5, -1)%360):
-
-#                 if clearRef == 1:
-#                     w_PID1.clear(); w_PID2.clear()
-#                     clearRef = 0
-
-#                 edge = True
-#                 Rotate(rotation_speed, vel1, vel2)
-                
-#             else:
-
-#                 print(Pt)
-
-                
-#                 edge = False
-                
-#                 bound[0].append(Pt[0])
-#                 bound[1].append(Pt[1])
-                
-#             if len(bound[0]) == 4:
-#                 IdentifyBound = True
-#                 motor1.stop()
-#                 motor2.stop()
-#                 clearRef = 2
-#                 break
-        
-
-        
-#         elif (100 > round(x, -1) or round(x, -1) > 250) and (FoundBall == False):
-#             if clearRef == 2:
-#                 w_PID1.clear(); w_PID2.clear()
-
-#                 clearRef = 3
-#             j = 0
-                  
-                
-#             if  (rotationAng[int(Reference)] >  round(Pt[2]-5, -1) / 2):
-#                 Rotate(1, vel1, vel2)
-#                 i = 0               
-#                 if x > 300:
-#                     RotateCC(1, vel1, vel2)
-                
-#                 elif x < 80:
-#                     Rotate(1, vel1, vel2)
-                
-#                 clearRef = 2
-
-#             elif i < 10000:
-#                 Reference = Reference + 1 / 5
-#                 Stop(motor1, motor2)
-                
-#                 print(i)
-#                 i = i + 1
-                
-#             if distance < 0.2:
-#                 Stop(motor1, motor2)
-#                 FoundBall = True
-#                 continue
-                
-
-#         elif (100 < round(x, -1) < 250) or FoundBall:
-
-#             if clearRef == 3 and FoundBall == False:
-#                 w_PID1.clear(); w_PID2.clear()
-#                 w_PID1.Kd = 0.0; w_PID2.Kd = 0.0
-#                 clearRef = 2
-#                 Ptb = Pt[2]; FoundBall = True
-#                 print('in this shit')
-#                 j = 0
-       
-#             if Ptb < Pt[2]-5:
-#                 RotateCC(2, vel1, vel2)
-                
-#             elif Ptb > Pt[2] + 5:
-#                 Rotate(2, vel1, vel2)
-#             elif Ptb > Pt[2] + 15:    
-#                 FoundBall = False
-#             else:        
-#                 if distance > 0.2:
-#                     speed = 20
-#                     Forward(speed, vel1, vel2)
-            
-#             if distance < 0.2:
-#                 Stop(motor1, motor2)
-#                 Pt = GrabBall(Pt, ballColor, bound)
-#                 if ballColor == 'red':
-#                     ballColor = 'blue';
-#                 if ballColor == 'blue':
-#                     ballColor = 'red';
-                
-#                 break
-
-                
 
     
 
