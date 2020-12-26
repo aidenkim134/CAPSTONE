@@ -183,7 +183,7 @@ turnDeg = [90, 190, 280, 30]
 
 try:
     while IdentifyBound == False:
-
+        break
         Time = time.time_ns() / 1E9
         pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
         time.sleep(0.01)
@@ -270,13 +270,13 @@ try:
                     direction ='clockwise'
                     Reference = 0
             
-                if (90 > round(x, -1) or round(x, -1) > 270):
+                if (70 > round(x, -1) or round(x, -1) > 270):
                     if clearRef == 0:
                         w_PID1.clear(); w_PID2.clear()
                         clearRef = 1
                     if direction == 'clockwise':
                         if  (rotationAng[int(Reference)] > Pt[2] or Pt[2] > 300):
-                            Rotate(5, vel1, vel2)
+                            Rotate(15, vel1, vel2)
                         else:
                             Stop(motor1, motor2)
                             Reference = Reference + 1 / 2
@@ -284,7 +284,7 @@ try:
                             
                     if direction == 'counter clockwise':
                         if  (rotationAng[int(Reference)] < Pt[2]) and Pt[2] < 300:
-                            RotateCC(5, vel1, vel2)
+                            RotateCC(15, vel1, vel2)
                         else:
                             Stop(motor1, motor2)
                             
@@ -371,7 +371,7 @@ try:
 
         #Move backward slightly to enclose the ball with claw
         clear = True
-        while np.sqrt((Pto[0])**2 + (Pto[1])**2) < distance * 170:
+        while np.sqrt((Pto[0])**2 + (Pto[1])**2) < distance * 130:
             Time = time.time_ns() / 1E9
             pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
             time.sleep(0.01)
@@ -392,9 +392,9 @@ try:
         
         #Find the edge perpendicular the location of inventory
         if ballColor == 'red':
-            wall = 220; gate = 320; #pos = bound[0][3]-20#pos = bound[3][0]
+            wall = 240; gate = 350; #pos = bound[0][3]-20#pos = bound[3][0]
         if ballColor == 'blue':
-            wall = 70; gate = 170; #pos = bound[1][1]
+            wall = 70; gate = 180; #pos = bound[1][1]
         
         clear = True
         while wall != round(Pt[2], -1):
@@ -476,7 +476,7 @@ try:
                 w_PID1.clear(); w_PID2.clear()
                 clear = False
             [vel1, vel2] = getSpeed(pre_enc1, pre_enc2, Time)
-            Backward(15, vel1, vel2)
+            Backward(7, vel1, vel2)
         
             Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
         Stop(motor1, motor2)
@@ -504,13 +504,13 @@ try:
                 w_PID1.clear(); w_PID2.clear()
                 clear = False
             [vel1, vel2] = getSpeed(pre_enc1, pre_enc2, Time)
-            forward(15, vel1, vel2)
+            Forward(7, vel1, vel2)
         
             Pt = UpdatePt(Pt, pre_enc1, pre_enc2, Time)
         Stop(motor1, motor2)
         Pt[2] = 0    
-        if ballColor == "blue":
-            break
+        #if ballColor == "blue":
+            #break
         #open the claw to release the ball
         if ballColor == 'red':
             ballColor = 'blue';
