@@ -9,7 +9,7 @@ import imutils
 # Are we using the Pi Camera?
 usingPiCamera = True
 # Set initial frame size.
-frameSize = (320, 240)
+frameSize = (640, 480)
  
 # Initialize mutithreading the video stream.
 vs = VideoStream(src=0, usePiCamera=usingPiCamera, resolution=frameSize,
@@ -27,7 +27,7 @@ while True:
     colorLimit = [([30,0,60], [225, 60, 100])]
     colorLimit = [([0,0,80], [70, 20, 255])]
     colorLimit = [([0,20,0], [255, 40, 50])]
-
+    colorLimit = [([0,0,0], [255, 255, 255])]
     # Get the next frame.
     vs.camera.zoom = (0.45, 0.45, 0.45, 0.45)
     frame = vs.read()
