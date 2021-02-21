@@ -1,0 +1,59 @@
+In terms of program implementation, similar to any machines, 
+the machine must calibrated to its environment. 
+
+So, in our simulated setup, the machine initially go around the boundaries to measure the boundary
+limits, and to sort of log in the data cordinates for the four corners. 
+
+And how is this done, because we have the wheel positions measured using encoders, its a matter of 
+incorporating our kinematic equation to determine the current position of our machine. 
+
+So once the machine reaches a corner, it will log its current position and it will 
+repeat this four times and we would have coordinates of our four corners. 
+
+'''''''''''''''''''''''''''''''''''''''''''''''Next slide
+
+Once the machine is calibrated to its environment, it would be time to do some work
+with it, like moving boxes around in the manufacturer facility. 
+
+So in order to do the work, of course this is simulated setup, the machine will complete a 360 degrees turn along its center of rotation
+and identify objects aka different colored ball in our case using our camera. 
+
+So once the machine finds these objects and centered like you see in the picture in the middle, it is a matter of appraching,
+grabbing the object using our claw mechanism and deliver them to their respective inventories. 
+
+''''''''''''''''''''''''''''''''''''''''''''''''''Next slide
+
+Now that is a brief overview of the program implementation logic.
+Next is, since we are using a pid controller, we need to do some PID tuning.
+Similar to any engineering problem, we first need a mathematical model that describes the motion of our motor.
+The top right is the differential equation that we are using for our simulation in simulink,
+which describes the voltage as a function of angular speed of the dc motor, where c and tau are dc gain and time constant. 
+
+Dc gain is a steady state response to duty cycle to [1]. Now when i say with the two brackets around one, it means that
+it's like a step wise function, where the value is 0 before time equals 0 and suddenly steps up to value of 1
+
+Time constant is the time required to reach 63% of steady state value
+
+Of course the motor constants are not given, therefore we determined it by observing the motor response to the step input. 
+The following figure on the bottom left is the result of it. And based on that we were able to determine the motor gain 
+and time constant. 
+Now, with that we have the mathematical model that would go in as our plant model in our PID controlled feedback loop. 
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''Next slide
+
+To tune our PID parameters, we used Ziegler nichols classical PID method for our machine, which is currently the most widely used method for PID tuning
+in the industry 
+It provides the control gains based on the curvature of step responses like you saw in the previous slide by using this table on the right.
+In which this table was determined through many experiments that ziegler nichols did back in his days. 
+
+'''''''''''''''''''''''Next slide
+
+So using the step response of our plant that we determined, we were able to determine the theoretical PI gains. 
+We are not using the derivative gains because, in many dc motor applications, derivative gains are not usually used,
+because I guess a bit of damping is already in the system as the dc motor brushes against the commutator. 
+Then we created a simulink model to simulate our system with these control gains, and the result seem quite promising, with
+much faster response and very little overshooting. 
+
+Now with that that being said, this is based on the idealized mathematical model, 
+Since we have our components being 3d printed as we speak, this is a good value to start with 
+and we'll tweak the values slightly based on how it performs with our real system, once it is finished assembling
