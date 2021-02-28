@@ -15,7 +15,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn import linear_model, datasets
 
-servo = ServoControl(3)
+servo = ServoControl(26)
 
 ser = serial.Serial("/dev/serial0", 115200)
 def getTFminiData():
@@ -38,29 +38,17 @@ def getTFminiData():
 slam = EKFSLAM()
 
 Ranges = []; Bearings = []
-for theta in range(40, 140, 10):
+for theta in range(-45, 45, 5):
     servo.TurnTo(theta)
     
     distance = getTFminiData()
     Ranges.append(distance)
     
-    Bearings.append((slam.u0[2]-90 + theta)%360)
+    Bearings.append((slam.u0[2] + theta)%360)
 
-Ranges = np.array(Ranges); Bearings = np.array(Bearings)
+servo.TurnTo(0)
+print(Ranges, Bearings)
 
-xy = np.array([Ranges * np.cos (Bearings + slam.u0[2]) + slam.u0[0], 
-               Ranges * np.sin (Bearings + slam.u0[2]) + slam.u0[1]])
-
-
-X = pd.DataFrame(np.array(xy).T)
-clustering = DBSCAN(eps=3, min_samples=2).fit(X)
-
-spikeLandmarks = X.loc[clustering.labels_ != 0] # spike landmarks
-
-ransac = linear_model.RANSACRegressor()
-ransac.fit(xy[0].reshape(-1, 1), xy[1])
-
-ransacLandmarks = pd.DataFrame(xy[:, ransac.inlier_mask_][:, [0, -1]].T)
 
 
 

@@ -4,14 +4,15 @@ import time
 import Encoder
 import pandas as pd
 
-motor1 = motorControl([1, 7, 8])
+motor1 = motorControl([21, 16, 12])
 
-enc = Encoder.Encoder(5,6)
+enc = Encoder.Encoder(13,19)
 time.sleep(2)
 data = [[],[]]
 
 i = 0
-motor1.setPWM(0); motor1.backward()
+motor1.setPWM(0);
+motor1.backward()
 startTime = time.time_ns()
 
 motor1.setPWM(100); motor1.forward ()
