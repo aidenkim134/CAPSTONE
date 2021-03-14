@@ -6,7 +6,7 @@ ser = serial.Serial("/dev/serial0", 115200)
 
 def getTFminiData():
     i = 0
-    while i < 2000:
+    while i < 800:
         count = ser.in_waiting
         if count > 8:
             recv = ser.read(9)   
@@ -27,7 +27,8 @@ if __name__ == '__main__':
             time.sleep(0.01)
             if ser.is_open == False:
                 ser.open()
-            print(getTFminiData())
+            distance = getTFminiData()
+            print(distance)
     
     except KeyboardInterrupt:   
         if ser != None:

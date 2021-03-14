@@ -98,10 +98,16 @@ motion = 'rotate'
 clearTerms = False
 
 
+SLAM.Store()
+plt.plot(SLAM.slam.u0[0], SLAM.slam.u0[1])
+for i in range(3, len(SLAM.slam.u0), 2):
+    plt.plot(SLAM.slam.u0[i], SLAM.slam.u0[i+1])
 
+plt.show()
+print(SLAM.slam.u0)   
 
 while True:
-    
+    break
     while FoundBall == False:
 
         

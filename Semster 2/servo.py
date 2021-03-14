@@ -5,6 +5,7 @@ import time
 class ServoControl:
     def __init__(self, pin):
         frequency = 50
+        
         GPIO.setwarnings(False)
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(pin, GPIO.OUT)
@@ -15,21 +16,28 @@ class ServoControl:
         time.sleep(2)
      
     def TurnTo (self, angle):
+
         #angle given in theta
         angle = angle + 90
         #2 to 12 is 0 to 180 degrees: f = 2 + 10 * theta / 180 
         f = lambda x: 2 + 10 * x / 180
         self.servo.ChangeDutyCycle(f(angle))
-        time.sleep(0.5)
         
+        time.sleep(0.1)
+        
+        self.servo.ChangeDutyCycle(0)
 
-servo = ServoControl(26)
+  
+        
+        
+if __name__ == '__main__':
+    servo = ServoControl(26)
+    
+    for i in range(-55, 55, 5):
+        time.sleep(0.1)
+        servo.TurnTo(i)
 
-
-
-for i in range(-55, 55, 5):
-    servo.TurnTo(i)
-
-servo.TurnTo(0)
+    servo.TurnTo(0)
+    
 
 
