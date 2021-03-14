@@ -73,9 +73,9 @@ Y = np.zeros((N_landmarks,3))
 Y[:,0] = np.random.uniform(low=-20., high=20., size=N_landmarks)
 Y[:,1] = np.random.uniform(low=-20., high=20., size=N_landmarks)
 Y[:,2] = np.arange(N_landmarks)
-R = np.array([[.00000001, .0, .0],
-              [.0, .000000001, .0],
-              [.0, .0, .0000001]])
+R = np.array([[.01, .0, .0],
+              [.0, .01, .0],
+              [.0, .0, .01]])
 
 v = 1 + .5*np.cos(.4*np.pi*t)
 w = -.2 + 2*np.cos(1.2*np.pi*t)
