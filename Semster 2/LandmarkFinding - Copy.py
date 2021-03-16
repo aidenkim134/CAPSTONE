@@ -39,10 +39,10 @@ class FindLandmark:
             i = i + 1
         return 1E9
         
-    def Store(self):
+    def Store(self, xy):
         Ranges = []; Bearings = []
 
-
+        '''
         for theta in range(-45, 45, 10):
             self.servo.TurnTo(theta)
             distance = 1E9
@@ -64,7 +64,8 @@ class FindLandmark:
         xy = [self.slam.u0[0] + Ranges * np.cos ((Bearings + self.slam.u0[2]) * np.pi / 180), 
               self.slam.u0[0] + Ranges * np.cos ((Bearings + self.slam.u0[2]) * np.pi / 180)]
         xy = np.array(xy)
-
+        '''
+        
         #finding corners
         
 
@@ -142,9 +143,77 @@ class FindLandmark:
         for i, v in enumerate(zip(Ranges, Bearings)):
             self.slam.AssociateLandmark(v[0], v[1])
         
+        # for corner in range(5):
+            
+        #     idx = np.random.randint(0, len(xy[0]) - n_points)
 
+        #     ransac = linear_model.RANSACRegressor()
+        #     ransac.fit(xy[0][idx:idx+n_points].reshape(-1, 1), xy[1][idx:idx+n_points])
+        #     pred = ransac.predict(xy[0].reshape(-1, 1))
+        #     error = abs(pred - xy[1])
+        #     error = np.where(error <= 5, error, True)
+        #     error = np.where(error > 5, error, False)
+            
+        #     if sum(error) > min_point:
+        #         xy = xy[:, error == 0]
+        #         models.append(ransac)
+                
+        #     if len(models) > 1:
+        #         #intecepting points as landmarks
+        #         xrange = np.linspace(-1, 10)
+        #         df = pd.DataFrame({'x':xrange, 'y1':models[0].predict(xrange),
+        #                            'y2':models[1].predict(xrange)})
+        #         df['diff'] = abs(df['y1'] - df['y2'])
+        #         df = df.loc[df['diff'] == df['diff'].min()]
+                
+        #         break
+        
+        # #determinig the balls (outliers) # may just take values as it is
+        # clustering = DBSCAN(eps=3, min_samples=2).fit(xy.T)
+        # landmark = xy.T[clustering.labels_ == -1].T
+        
+        
+        
+        # #landmark = np.append(landmark, df[['x', 'y1']].values, axis = 1)
+        
+        # Ranges = np.sqrt(np.power(self.slam.u0[0]**2 - landmark[0], 2) + 
+        #                   np.power(self.slam.u0[1]**2 - landmark[1], 2))
+        
+        # Bearings = np.arctan2(self.slam.u0[1]**2 - landmark[1],
+        #                                self.slam.u0[0]**2 - landmark[0])
+            
+        
+        # for Range, Bearing in enumerate(zip(Ranges, Bearings)):
+        #     self.slam.AssociateLandmark(Range, Bearing)
 
         
+if __name__ == '__main__':
+    u0 = np.array([0.5,0.75,3,0,0,0, 1.8, 1.8, 1.8, 1.8, 0])  
+    u0 = np.append(u0, np.array([0.4, 0.6, 0.7, 0.9, 1.6, 1.3, 0.5, 1.3]))
 
-
+    x = []; y = []
+    for idx in range(3, len(u0), 2):
+        x.append(u0[idx])
+        y.append(u0[idx + 1])
+    x = np.array(x); y = np.array(y)
+    x = np.linspace(0, 1,10)   
+    y = np.zeros(10)
+    size = len(x)
+    r = np.sqrt(x**2 + y**2)
+    idxmax = r.argmax(); idxmin = r.argmin()    
+    x = np.array(x); y = np.array(y)
+    x = np.append(x, np.repeat(1, size))
+    y = np.append(y, x[:size])
+    
+    y = np.append(y, np.repeat(1, size))    
+    x = np.append(x, x[:size]) 
+    for i in range(len(x)):
+        x[i] = x[i] + np.random.randint(0,9) / 100   
+        y[i] = y[i] + np.random.randint(0,9) / 100   
+    
+    x[-1] = 0.5; y[-1] = 0.5
+    
+    obj = FindLandmark()
+    xy = np.array([x, y])
+    obj.Store(xy)
       

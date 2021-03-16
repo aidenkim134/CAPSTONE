@@ -172,7 +172,14 @@ while True:
             Forward(0, vel1, vel2)
             
             
-            # Ballcolor = getColor()
+            # ballColor = getColor()        
+            if ballColor == 'red':
+                coord = 'max'
+            elif ballColor == 'blue':
+                coord = 'min'
+            
+            path = PathPlanning(SLAM.slam.u0, coord)
+            points = path.getPoints()
             
             foundBall = True
     
@@ -238,10 +245,17 @@ while True:
                 clearTerms = False
             Backward(15, vel1, vel2)
             
-    while True:
-        path = PathPlanning(SLAM.slam.u0, 'max?')
-        points = path.getPoints()
+    for point in points:
+        # rotate
         
+        # approach
+
+    
+    #once approached turn 180 ish:
+    #claw.close()
+    
+        
+        # loop through two points
         
 #every nth iteration, do 5 scans.
 

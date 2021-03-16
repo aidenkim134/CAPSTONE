@@ -126,7 +126,7 @@ class EKFSLAM:
                 Distance = ((self.u0[idx] - self.u0[0])**2 + 
                                 (self.u0[idx + 1] - self.u0[1])**2)
                 Distance = np.sqrt(Distance)
-                if Distance < maxDist:            
+                if Distance < maxDist and Distance > 0.2:            
                     self.ClosestIdx = idx
                     maxDist = Distance
         
