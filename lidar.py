@@ -24,7 +24,7 @@ def getTFminiData():
 if __name__ == '__main__':
     try:
         while True:
-            time.sleep(0.01)
+            time.sleep(1)
             if ser.is_open == False:
                 ser.open()
             distance = getTFminiData()

@@ -101,9 +101,9 @@ clearTerms = False
 SLAM.Store()
 plt.plot(SLAM.slam.u0[0], SLAM.slam.u0[1])
 for i in range(3, len(SLAM.slam.u0), 2):
-    plt.plot(SLAM.slam.u0[i], SLAM.slam.u0[i+1])
+    plt.plot(SLAM.slam.u0[i], SLAM.slam.u0[i+1], 'd')
 
-plt.show()
+plt.savefig('landmarks.png')
 print(SLAM.slam.u0)   
 
 while True:
@@ -245,7 +245,7 @@ while True:
                 clearTerms = False
             Backward(15, vel1, vel2)
             
-    for point in points:
+    #for point in points:
         # rotate
         
         # approach

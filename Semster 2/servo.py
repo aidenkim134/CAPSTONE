@@ -7,13 +7,13 @@ class ServoControl:
         frequency = 50
         
         GPIO.setwarnings(False)
-        GPIO.setmode(GPIO.BCM)
+
         GPIO.setup(pin, GPIO.OUT)
         self.servo = GPIO.PWM(pin, frequency) # Note 11 is pin, 50 = 50Hz pulse
     
         #start PWM running, but with value of 0 (pulse off)
         self.servo.start(0)
-        time.sleep(2)
+        time.sleep(1)
      
     def TurnTo (self, angle):
 
@@ -24,7 +24,7 @@ class ServoControl:
         self.servo.ChangeDutyCycle(f(angle))
         
         time.sleep(0.1)
-        
+    
         self.servo.ChangeDutyCycle(0)
 
   

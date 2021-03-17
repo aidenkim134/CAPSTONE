@@ -12,10 +12,11 @@ class EKFSLAM:
     
     def __init__(self):
         
-        self.N_landmarks = 15
+        self.N_landmarks = 40
         inf = 1E8
         
         self.u0 = np.zeros(3 + 2 * self.N_landmarks) #3 coordinate system + 2 * landmarks
+        self.u0[2] = 45
         self.sigma0 = np.zeros([3 + 2 * self.N_landmarks, 3 + 2 * self.N_landmarks])
         
         self.Rt = np.zeros([3 + 2 * self.N_landmarks, 3 + 2 * self.N_landmarks]) #adjust added uncertainty as robot moves. Fix zero for now
