@@ -34,7 +34,7 @@ class FindLandmark:
                 
                 if recv[0] == 0x59 and recv[1] == 0x59:     #python3
                     distance = recv[2] + recv[3] * 256
-                    distance = distance / 100 - 0.075
+                    distance = distance / 100 
                     #print("current distance is {}m".format(distance))
                     self.ser.reset_input_buffer()
                     return distance  
@@ -57,14 +57,12 @@ class FindLandmark:
             if distance > 2:
                 continue 
             Ranges.append(distance)
-            
-            print(distance)
 
-            Bearings.append((theta)%360)
+            Bearings.append((-theta)%360)
             
         Ranges = Ranges[6:-6]
         Bearings = Bearings[6:-6]
-
+        
         self.servo.TurnTo(0)
 
         
@@ -73,24 +71,16 @@ class FindLandmark:
               self.slam.u0[1] + Ranges * np.sin ((Bearings + self.slam.u0[2]) * np.pi / 180)]
         xy = np.array(xy)
 
-        #finding corners
-        plt.figure()
-        plt.plot(xy[1], xy[0], 'o')
-        plt.savefig('observations.png')
-        st = pd.DataFrame({'x':xy[0], 'y':xy[1]})
-        st.to_csv('data.csv')
-        
-        
         min_point = 6 #15
         models = []
-        
+        plt.plot(xy[0], xy[1], 'o')
         r = np.sqrt(xy[0]**2 + xy[1]**2)
         theta = np.arctan2(xy[1], xy[0]) 
         xy[0] = r * np.cos(np.pi/4 + theta)
         xy[1] = r * np.sin(np.pi/4 + theta)
 
-        division = 3
         
+        division = 3
         for m in range(division):
 
             size = int(len(xy[0]) / division)
@@ -111,17 +101,23 @@ class FindLandmark:
         Landmarks = np.array([[0,0]])
         
         #determinig the balls (outliers) # may just take values as it is
-        clustering = DBSCAN(eps=0.05, min_samples=6).fit(xy.T)
-	unique, counts = np.unique(clustering.labels_, return_counts = True)
-
-	for label in unique[counts < 20]:
+        clustering = DBSCAN(eps=0.05, min_samples=4).fit(xy.T)
+        
+        self.xy = xy
+        unique, counts = np.unique(clustering.labels_, return_counts = True)
+        self.clustering = clustering
+        for label in unique[counts < 20]:
             if label == -1:
                 continue
-            print(xy.T[clustering.labels_ == label].T[0])
             x_match = np.array(xy.T[clustering.labels_ == label]).T[0].mean()
             y_match = np.array(xy.T[clustering.labels_ == label]).T[1].mean()
             Landmarks = np.append(Landmarks, np.array([[x_match,y_match]]), axis = 0)
         
+       
+        
+   
+
+
         if len(models) > 1:
             for i in range(len(models)-1):
                 xrange = np.linspace(-0.5,2, 100000)
@@ -131,7 +127,7 @@ class FindLandmark:
                 
                 if df['diff'].min() < 0.05:
                     df = df.loc[df['diff'] == df['diff'].min()]
-                    if df['x'].values[0] != None:
+                    if df['x'].values != None:
                         Landmarks = np.append(Landmarks, df[['x', 'y1']].values, axis=0)
                     
                     
@@ -143,27 +139,34 @@ class FindLandmark:
             theta = np.arctan2(Landmarks[i][1], Landmarks[i][0]) 
             Landmarks[i][0] = r * np.cos(theta - np.pi/4)
             Landmarks[i][1] = r * np.sin(theta - np.pi/4)
+
         
-        plt.plot(Landmarks.T[0], Landmarks.T[1], 'd')
         self.Landmarks = Landmarks
-
-
-        Ranges = np.array([])
+        
+        print("landmarks from clustering", Landmarks)
+        
+        Ranges = np.array([]); Bearings = np.array([])
         for Landmark in Landmarks:
-            R = np.sqrt(np.power(self.slam.u0[0]**2 - Landmark[0], 2) + 
-                          np.power(self.slam.u0[1]**2 - Landmark[1], 2))
+            R = np.sqrt(np.power(self.slam.u0[0] - Landmark[0], 2) + 
+                          np.power(self.slam.u0[1] - Landmark[1], 2))
             Ranges = np.append(Ranges, R)
             
-            B = np.arctan2(-self.slam.u0[1]**2 + Landmark[1],
-                                       -self.slam.u0[0]**2 + Landmark[0])
+            B = np.arctan2(self.slam.u0[1] - Landmark[1],
+                                       self.slam.u0[0] - Landmark[0])
             
+        
             Bearings = np.append(Bearings, B)
+        Bearings = Bearings * 180 / np.pi
+        Bearings = Bearings % 360
+        
+        
 
-        Bearings = Bearings * 180 / np.pi  
-   
         self.Ranges = Ranges; self.Bearings = Bearings
         for i, v in enumerate(zip(Ranges, Bearings)):
-            self.slam.AssociateLandmark(v[0], v[1])
+            print('measurements', i, v)
+            if v[0] > 2:
+                continue
+            self.slam.AddLandmarks(v[0], v[1])
         
 
 

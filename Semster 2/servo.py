@@ -5,7 +5,7 @@ import time
 class ServoControl:
     def __init__(self, pin):
         frequency = 50
-        
+        GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
 
         GPIO.setup(pin, GPIO.OUT)
@@ -33,7 +33,7 @@ class ServoControl:
 if __name__ == '__main__':
     servo = ServoControl(26)
     
-    for i in range(-55, 55, 5):
+    for i in range(-45, 45, 5):
         time.sleep(0.1)
         servo.TurnTo(i)
 

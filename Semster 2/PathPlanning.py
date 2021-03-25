@@ -11,8 +11,8 @@ from math import sqrt, acos, atan2, sin, cos
 import matplotlib.pyplot as plt
 class PathPlanning:
     def __init__(self, u0, destination):
-        fig = plt.figure(num=None, figsize=(8,8), dpi=80, facecolor='w', edgecolor='k')
-        self.ax = fig.add_subplot(1, 1, 1)
+        j = np.where(u0[3:] == 0)[0][2] + 3
+        u0 = u0[:j]
         
         self.pos = u0[0:2]
         x = []; y = []
@@ -41,27 +41,22 @@ class PathPlanning:
                                         np.repeat(self.y[idxmin], size)])        
         self.x = np.append(self.x, [self.x[:size], self.x[:size]])
         
-        self.ax.plot(self.x[size:], self.y[size:], 'o')
-        
-        
-        self.ax.plot(self.x[:size], self.y[:size], 'o');
-
-        self.ax.plot(self.pos[0], self.pos[1], 'd')
+ 
 
         df = pd.DataFrame({'x':self.x, 'y':self.y})
         distmat = pd.DataFrame(distance_matrix(df.values, df.values))
         
-        self.radius = 0.20
+        self.radius = 0.10
         self.Dcircle = 0.1
         self.distmat = distmat.apply(lambda x: x > 0.20 + 0.1 * 2) 
         
         if destination == 'max':
-            self.xloc = self.xloc - 0.25; self.yloc = self.yloc - 0.25
+            self.xloc = self.xloc - 0.1; self.yloc = self.yloc - 0.25
             
         elif destination == 'min':
-            self.xloc = self.xloc + 0.25; self.yloc = self.yloc + 0.25
+            self.xloc = self.xloc + 0.1; self.yloc = self.yloc + 0.25
         
-        self.ax.plot(self.xloc, self.yloc, 'x')
+ 
         
         
     def getPoints (self):
@@ -74,31 +69,32 @@ class PathPlanning:
                 self.p = np.array([self.xloc, self.yloc])
                 FoundPath = True
             return FoundPath
-            
-
+ 
         x_crit = np.array([]); y_crit = np.array([])
+
         for idx, row in self.distmat.iterrows():
+   
             omit = self.distmat.index[self.distmat[idx] == False].tolist()
             omit.remove(idx)
             
             for loc in omit:
                 x_crit = np.append(x_crit, np.linspace(self.x[idx], self.x[loc]))
                 y_crit = np.append(y_crit, np.linspace(self.y[idx], self.y[loc]))
-                
+     
                 
         self.dangerCircle()
+       
         x_crit = np.append(x_crit, self.danger[0])  
         y_crit = np.append(y_crit, self.danger[1])  
         df_crit = pd.DataFrame({'x_crit':x_crit, 'y_crit':y_crit})
-
+    
         # 1 point
-        xv = np.linspace(self.pos[0], self.xloc, 1000)
-        yv = np.linspace(self.pos[1], self.yloc, 1000)
+        xv = np.linspace(self.pos[0], self.xloc, 10)
+        yv = np.linspace(self.pos[1], self.yloc, 10)
         
         FoundPath = validate(xv, yv)
 
         if FoundPath == True:
-            self.ax.plot(self.xloc, self.yloc, 'd')
             return [[self.xloc, self.yloc]]
             
         # n point
@@ -128,11 +124,6 @@ class PathPlanning:
             To[0] = np.flipud(To[0])
             To[1] = np.flipud(To[1])
 
-        self.ax.plot(To[0][0], To[1][0], 'd', markersize = 2) 
-        self.ax.plot(To[0][1], To[1][1], 'd', markersize = 2)
-        self.ax.plot(Tloc[0][0], Tloc[1][0], 'd', markersize = 2)
-        self.ax.plot(Tloc[0][1], Tloc[1][1], 'd', markersize = 2)
-
         lino1 = self.line([To[0][0], self.pos[0]], [To[1][0], self.pos[1]])
         
         
@@ -142,7 +133,7 @@ class PathPlanning:
         linp1 = self.line([Tloc[0][0], self.xloc], [Tloc[1][0], self.yloc])
 
         linp2 = self.line([Tloc[0][1], self.xloc], [Tloc[1][1], self.yloc])
-
+        
         x1  = (lino1[0] - linp1[0]) / (linp1[1] - lino1[1])
         y1 = lino1[0] + lino1[1] * x1
 
@@ -150,23 +141,26 @@ class PathPlanning:
         y2 = lino2[0] + lino2[1] * x2
         
         x = [x1, x2]; y = [y1, y2]
-        self.ax.plot(x, y, 'p', markersize = 2)
+   
 
         xv = [np.array([]), np.array([])]; yv = [np.array([]), np.array([])]     
-
+      
         for i in range(2):
             xv[i] = np.linspace(self.pos[0], x[i])
             xv[i] = np.append(xv[i], np.linspace(x[i], self.xloc))
                                  
             yv[i] = np.linspace(self.pos[1], y[i])
             yv[i] = np.append(yv[i], np.linspace(y[i], self.yloc))                 
-            
+        
+
         for i in range(2):
             FoundPath = validate(xv[i], yv[i])
             if FoundPath == True:
-                self.ax.plot(x[i], y[i], 'd', self.xloc, self.yloc, 'd')
+       
                 return [[x[i], y[i]], [self.xloc, self.yloc]]
-            
+        
+        return [[self.xloc, self.yloc]]
+    
         
     def dangerCircle(self):
         
@@ -182,7 +176,7 @@ class PathPlanning:
                 danger = np.append(danger, PointsInCircum(r) + p, axis=0)
                 
         self.danger = danger.T
-        self.ax.plot(self.danger[0], self.danger[1], 'o', markersize=0.1)
+
         
             
     def tangent(self, Px, Py, Cx, Cy):
@@ -207,11 +201,12 @@ class PathPlanning:
         
 
 if __name__ == '__main__':
-    p = np.array([0.5,0.75,3,0,0,0, 1.8, 1.8, 1.8, 1.8, 0])  
-    p = np.append(p, np.array([0.4, 0.6, 0.7, 0.9, 1.6, 1.3, 0.5, 1.3]))
+    p = np.array([0.5,0.75,3, 1.8, 1.8])  
+
     
     obj = PathPlanning(p, 'max')   
-    point = obj.getPoints()  
+    point = obj.getPoints()
+    print(point)
         
         
         
