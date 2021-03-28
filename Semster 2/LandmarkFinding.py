@@ -45,7 +45,7 @@ class FindLandmark:
         Ranges = []; Bearings = []
 
 
-        for theta in range(-180, 180, 1):
+        for theta in range(-180, 180, 2):
             theta = theta / 4
             self.servo.TurnTo(theta)
             distance = 1E9
@@ -64,13 +64,14 @@ class FindLandmark:
         Bearings = Bearings[6:-6]
         
         self.servo.TurnTo(0)
-
+        
         
 
         xy = [self.slam.u0[0] + Ranges * np.cos ((Bearings + self.slam.u0[2]) * np.pi / 180), 
               self.slam.u0[1] + Ranges * np.sin ((Bearings + self.slam.u0[2]) * np.pi / 180)]
         xy = np.array(xy)
-
+        measurement = pd.DataFrame({'x':xy[0], 'y':xy[1]})
+        measurement.to_csv('measurement.csv')
         min_point = 6 #15
         models = []
         plt.plot(xy[0], xy[1], 'o')
@@ -106,7 +107,7 @@ class FindLandmark:
         self.xy = xy
         unique, counts = np.unique(clustering.labels_, return_counts = True)
         self.clustering = clustering
-        for label in unique[counts < 20]:
+        for label in unique[counts < 30]:
             if label == -1:
                 continue
             x_match = np.array(xy.T[clustering.labels_ == label]).T[0].mean()
@@ -139,7 +140,6 @@ class FindLandmark:
             theta = np.arctan2(Landmarks[i][1], Landmarks[i][0]) 
             Landmarks[i][0] = r * np.cos(theta - np.pi/4)
             Landmarks[i][1] = r * np.sin(theta - np.pi/4)
-
         
         self.Landmarks = Landmarks
         
@@ -151,13 +151,13 @@ class FindLandmark:
                           np.power(self.slam.u0[1] - Landmark[1], 2))
             Ranges = np.append(Ranges, R)
             
-            B = np.arctan2(self.slam.u0[1] - Landmark[1],
-                                       self.slam.u0[0] - Landmark[0])
+            B = np.arctan2(-self.slam.u0[1] + Landmark[1],
+                                       -self.slam.u0[0]+ Landmark[0]) 
             
         
             Bearings = np.append(Bearings, B)
-        Bearings = Bearings * 180 / np.pi
-        Bearings = Bearings % 360
+        Bearings = Bearings * 180 / np.pi - self.slam.u0[2]
+        Bearings = Bearings % 360 
         
         
 

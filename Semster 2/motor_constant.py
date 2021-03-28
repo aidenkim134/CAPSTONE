@@ -32,8 +32,8 @@ def Backward(speed, vel1, vel2):
 
 def getSpeed (d_enc1, d_enc2, dt):
     #10000 was good tick ratio
-    Ldist = (d_enc1)  / 7000
-    Rdist = (d_enc2)  / 7000
+    Ldist = (d_enc1)  / 6500
+    Rdist = (d_enc2)  / 6500
     
 
     D = 0.26 #m
@@ -47,8 +47,8 @@ def getSpeed (d_enc1, d_enc2, dt):
     
     
 
-    vel1 = (d_enc1) / 7000 / (dt) 
-    vel2 = (d_enc2) / 7000 / (dt)
+    vel1 = (d_enc1) / 6500 / (dt) 
+    vel2 = (d_enc2) / 6500 / (dt)
     
     
     W = Theta * np.pi / 180 / dt
@@ -98,8 +98,7 @@ while i< 500:
     
     d.append(V * dt); theta.append(W * dt * 180 / np.pi)
     print(enc1.read(), enc2.read())
-    if sum(theta)%360 > 28:
-        break
+ 
     i = i + 1
 motor1.setPWM(0); motor1.stop()
 motor2.setPWM(0); motor2.stop()

@@ -16,7 +16,7 @@ class EKFSLAM:
         
         self.u0 = np.zeros(3 + 2 * self.N_landmarks) #3 coordinate system + 2 * landmarks
         self.sigma0 = np.zeros([3 + 2 * self.N_landmarks, 3 + 2 * self.N_landmarks])
-        self.u0[0] = 1.25; self.u0[1] = 1.25; self.u0[2] = 180
+        self.u0[1] = 0.65
         self.Rt = np.zeros([3 + 2 * self.N_landmarks, 3 + 2 * self.N_landmarks]) #adjust added uncertainty as robot moves. Fix zero for now
         self.Rt[0,0] = 0.0; self.Rt[1,1] = 0.0; self.Rt[2,2] = 0.0; 
         self.Gt = np.eye(3 + 2 * self.N_landmarks)
@@ -145,7 +145,7 @@ class EKFSLAM:
     def closest (self):
         self.ClosestIdx = 3
         maxDist = 10000
-        offset = 0.3; maxp = 1.4
+        offset = 0.3; maxp = 1.6
         for idx in range(3, len(self.u0), 2):
             if (self.u0[idx] != 0 and self.u0[idx] > offset
                     and self.u0[idx +1] > offset and self.u0[idx] < maxp-offset and  self.u0[idx + 1] < maxp-offset):

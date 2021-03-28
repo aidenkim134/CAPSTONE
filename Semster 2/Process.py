@@ -18,7 +18,10 @@ import Encoder
 import matplotlib.pyplot as plt
 from LandmarkFinding import FindLandmark
 from PathPlanning import PathPlanning
+#from camera import CNN
 
+''' CNN object'''
+#color = CNN()
 
 '''defining encoder object'''
 enc1 = Encoder.Encoder(2,3); enc2 = Encoder.Encoder(13, 19)
@@ -26,6 +29,7 @@ enc1 = Encoder.Encoder(2,3); enc2 = Encoder.Encoder(13, 19)
 '''defining motor object'''
 motor1 = motorControl([1, 8, 7])
 motor2 = motorControl([21, 16, 12])
+motor1.stop(); motor2.stop()
 
 '''definining stepper motor claw object'''
 stepper = [27, 22, 23, 24] #in1, in2, in3, in4
@@ -44,7 +48,7 @@ def getSpeed (d_enc1, d_enc2, dt):
     Rdist = (d_enc2)  / 6500
     
 
-    D = 0.205 #m
+    D = 0.1533 #m
     if Ldist != Rdist:
         r = D * (Ldist + Rdist) / 2 / (Rdist - Ldist)
         Theta = (Rdist - Ldist) / D * 360 / (2*np.pi) 
@@ -100,237 +104,286 @@ def Forward(speed, vel1, vel2):
 SLAM = FindLandmark()
 # do two scan before beginning
 
-
-while True:
-    
-    for j in range(2):
-        plt.figure()
-        SLAM.Store()
-        plt.plot(SLAM.slam.u0[0], SLAM.slam.u0[1], 'd')
-        for i in range(3, len(SLAM.slam.u0), 2):
-            plt.plot(SLAM.slam.u0[i], SLAM.slam.u0[i+1], 'x')
-        plt.savefig('pics/landmarks{}.png'.format(j))
-
-    foundBall = False
-    Time = time.time_ns() / 1E9
-    pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
-    motion = 'rotate'
-    clearTerms = False
-    Destination = False
-    break
-    while foundBall == False:
-
+ballColor = 'Blue_Ball'
+try:
+    while True:
         
-        time.sleep(0.01)
-        dt = time.time_ns() / 1E9 - Time
-        d_enc1 = enc1.read() - pre_enc1; d_enc2 = enc2.read() - pre_enc2;
-        
-        vel1, vel2, V, W = getSpeed(d_enc1, d_enc2, dt)
-        SLAM.slam.Update(V, W, dt)
-        
-    
-        Time = time.time_ns() / 1E9    
-        pre_enc1 = enc1.read(); pre_enc2 = enc2.read()   
-            
-
+        for j in range(1):
+            plt.figure()
+            SLAM.Store()
+            x_landmark = [SLAM.slam.u0[0]]; y_landmark = [SLAM.slam.u0[1]]
+            plt.plot(SLAM.slam.u0[0], SLAM.slam.u0[1], 'd')
+            for i in range(3, len(SLAM.slam.u0), 2):
+                plt.plot(SLAM.slam.u0[i], SLAM.slam.u0[i+1], 'x')
+                x_landmark.append(SLAM.slam.u0[i]); y_landmark.append(SLAM.slam.u0[i+1])
+            plt.savefig('pics/landmarks{}.png'.format(j))
+        landmark = pd.DataFrame({'x':x_landmark, 'y':y_landmark})
+        landmark.to_csv('landmark.csv')
+        foundBall = False
+        Time = time.time_ns() / 1E9
+        pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
+        motion = 'rotate'
+        clearTerms = False
+        Destination = False
+        identifyBall = False
         
         dx = SLAM.slam.u0[SLAM.slam.ClosestIdx] - SLAM.slam.u0[0]
         dy = SLAM.slam.u0[SLAM.slam.ClosestIdx + 1] - SLAM.slam.u0[1]
-        
-        Theta_rel = SLAM.slam.u0[2] - np.arctan2(dy, dx) * 180 / np.pi
-        min_dist = np.sqrt(dx**2 + dy**2)
-        
-        adjuster = 360
-        if Theta_rel > 0:
-            adjuster = -360
-    
-        if abs(Theta_rel) > 180:
-            Theta_rel = adjuster + Theta_rel
-        
-        if abs(Theta_rel) > 15:
-            if motion == 'forward':
-                clearTerms = True
-            motion = 'rotate'          
-        else:
-            if motion == 'rotate':
-                clearTerms = True
-            motion = 'forward'
-          
-        if motion == 'rotate':
+        SLAM.servo.TurnTo(-np.arctan2(dy, dx) * 180 / np.pi + SLAM.slam.u0[2])
+        #ballColor = color.predict()
+        if ballColor == 'Red_Ball':
+            ballColor = 'Blue_Ball'
+        elif ballColor == 'Blue_Ball':
+            ballColor = 'Red_Ball'
             
-            if clearTerms == True:
-                w_PID1.clear(); w_PID2.clear();
-                clearTerms = False
-                print('clear terms')
-            if Theta_rel > 0:
-           
-                Rotate (3, vel1, vel2)
-    
-            if Theta_rel < 0:
-           
-                RotateCC (3, vel1, vel2)
-         
-        elif motion =='forward':
-            
-            if clearTerms == True:
-                w_PID1.clear(); w_PID2.clear(); 
-                clearTerms = False
-            Forward (3, vel1, vel2)
-            
-        
-        if min_dist < 0.05:
-            SLAM.slam.u0[SLAM.slam.ClosestIdx + 1] = 0
-            SLAM.slam.u0[SLAM.slam.ClosestIdx] = 0
+        if ballColor == 'Blue_Ball':
+            coord = 'max'
+        elif ballColor == 'Red_Ball':
+            coord = 'min'
+        print(ballColor)
 
-            w_PID1.clear(); w_PID2.clear(); 
-            Forward(0, vel1, vel2)
-            ballColor = 'red'
-            
-            # ballColor = getColor()        
-            if ballColor == 'red':
-                coord = 'max'
-            elif ballColor == 'blue':
-                coord = 'min'
-            
-            print('We found the ball-------------')
+        time.sleep(2)
+        break
+        while foundBall == False:
 
-            path = PathPlanning(SLAM.slam.u0, coord)
+            
+            time.sleep(0.01)
+            dt = time.time_ns() / 1E9 - Time
+            d_enc1 = enc1.read() - pre_enc1; d_enc2 = enc2.read() - pre_enc2;
+            
+            vel1, vel2, V, W = getSpeed(d_enc1, d_enc2, dt)
+            SLAM.slam.Update(V, W, dt)
+            
+        
+            #Time = time.time_ns() / 1E9    
+            #pre_enc1 = enc1.read(); pre_enc2 = enc2.read()   
+                
 
-            points = path.getPoints()
-            print(points)
-            foundBall = True
-    
-    while foundBall == True:
+            
+            dx = SLAM.slam.u0[SLAM.slam.ClosestIdx] - SLAM.slam.u0[0]
+            dy = SLAM.slam.u0[SLAM.slam.ClosestIdx + 1] - SLAM.slam.u0[1]
+            
       
-        time.sleep(0.01)
-        dt = time.time_ns() / 1E9 - Time
-        d_enc1 = enc1.read() - pre_enc1; d_enc2 = enc2.read() - pre_enc2; 
-        
-        vel1, vel2, V, W = getSpeed(d_enc1, d_enc2, dt)
-        SLAM.slam.Update(V, W, dt)
-    
-    
-        Time = time.time_ns() / 1E9    
-        pre_enc1 = enc1.read(); pre_enc2 = enc2.read()   
+            
+            Theta_rel = SLAM.slam.u0[2] - np.arctan2(dy, dx) * 180 / np.pi
+            
 
-        dx = SLAM.slam.u0[SLAM.slam.ClosestIdx] - SLAM.slam.u0[0]
-        dy = SLAM.slam.u0[SLAM.slam.ClosestIdx + 1] - SLAM.slam.u0[1]
-        
-        Theta_rel = SLAM.slam.u0[2] - np.arctan2(dy, dx)
-        min_dist = np.sqrt(dx**2 + dy**2)
-        
-        adjuster = 360
-        if Theta_rel > 0:
-            adjuster = -360
-    
-        if abs(Theta_rel) > 180:
-            Theta_rel = adjuster + Theta_rel
-            
-        
-        if abs(Theta_rel) > 175:
-            w_PID1.clear(); w_PID2.clear(); 
-            Forward(0, vel1, vel2)
-            claw.Close()
-            
-            Time = time.time_ns() / 1E9  
-            Destination = True
-            foundBall = False
-            print('we got the ball')
-        
 
-        Rotate(3, vel1, vel2)
             
-    idx = 0
-    while Destination == True:
-        time.sleep(0.01)
-        dt = time.time_ns() / 1E9 - Time
-        d_enc1 = enc1.read() - pre_enc1; d_enc2 = enc2.read() - pre_enc2;
-        
-        vel1, vel2, V, W = getSpeed(d_enc1, d_enc2, dt)
-        SLAM.slam.Update(V, W, dt)
-        
-    
-        Time = time.time_ns() / 1E9    
-        pre_enc1 = enc1.read(); pre_enc2 = enc2.read()   
+            min_dist = np.sqrt(dx**2 + dy**2)
             
-        dx = points[idx][0] - SLAM.slam.u0[0]
-        dy = points[idx][1]- SLAM.slam.u0[1]
-        
-        Theta_rel = SLAM.slam.u0[2] - np.arctan2(dy, dx) * 180 / np.pi
-        min_dist = np.sqrt(dx**2 + dy**2)
-        
-        adjuster = 360
-        if Theta_rel > 0:
-            adjuster = -360
-    
-        if abs(Theta_rel) > 180:
-            Theta_rel = adjuster + Theta_rel
-        
-        if abs(Theta_rel) > 5:
-            if motion == 'forward':
-                clearTerms = True
-            motion = 'rotate'          
-        else:
-            if motion == 'rotate':
-                clearTerms = True
-            motion = 'forward'
-          
-        if motion == 'rotate':
-            
-            if clearTerms == True:
-                w_PID1.clear(); w_PID2.clear();
-                clearTerms = False
-                print('clear terms')
+            adjuster = 360
             if Theta_rel > 0:
-     
-                Rotate (3, vel1, vel2)
-    
-            if Theta_rel < 0:
-            
-                RotateCC (3, vel1, vel2)
-         
-        elif motion =='forward':
-            
-            if clearTerms == True:
-                w_PID1.clear(); w_PID2.clear(); 
-                clearTerms = False
-            Forward (3, vel1, vel2)
-            
+                adjuster = -360
         
-        if min_dist < 0.1:
-            if len(points) == 2 and idx == 0:
-                idx = 1
-                continue
+            if abs(Theta_rel) > 180:
+                Theta_rel = adjuster + Theta_rel
+            
+            if abs(Theta_rel) > 10 :
+                if motion == 'forward':
+                    clearTerms = True
+                motion = 'rotate'          
             else:
+                if motion == 'rotate':
+                    clearTerms = True
+                motion = 'forward'
+              
+            if motion == 'rotate':
+                Time = time.time_ns() / 1E9    
+                pre_enc1 = enc1.read(); pre_enc2 = enc2.read()  
+                if clearTerms == True:
+                    w_PID1.clear(); w_PID2.clear();
+                    clearTerms = False
+                    
+                if Theta_rel > 0:
+               
+                    Rotate (3, vel1, vel2)
+        
+                if Theta_rel < 0:
+               
+                    RotateCC (3, vel1, vel2)
+             
+            elif motion =='forward':
+                Time = time.time_ns() / 1E9    
+                pre_enc1 = enc1.read(); pre_enc2 = enc2.read()  
+                if clearTerms == True:
+                    w_PID1.clear(); w_PID2.clear(); 
+                    clearTerms = False
+                Forward (3, vel1, vel2)
+
+                
+            
+            if min_dist < 0.10:
+
+                
                 w_PID1.clear(); w_PID2.clear(); 
                 Forward(0, vel1, vel2)
-                Destination = False
 
-    Terminate = False
-    while Terminate == False:
-        time.sleep(0.01)
-        dt = time.time_ns() / 1E9 - Time
-        d_enc1 = enc1.read() - pre_enc1; d_enc2 = enc2.read() - pre_enc2; 
+                
+                print('We found the ball-------------')
+
+                path = PathPlanning(SLAM.slam.u0, coord, SLAM.slam.ClosestIdx)
+
+                points = path.getPoints()
+                print(points)
+                foundBall = True
+                print(Theta_rel)
+            
+            print('Thetarel is:', Theta_rel, SLAM.slam.u0[:3], np.arctan2(dy, dx) * 180 / np.pi)   
+              
+        pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
+        Time = time.time_ns() / 1E9
+        while foundBall == True:
+            print('encoder readings:',enc1.read(), enc2.read(), d_enc1, d_enc2)
+            time.sleep(0.01)
+            dt = time.time_ns() / 1E9 - Time
+            d_enc1 = enc1.read() - pre_enc1; d_enc2 = enc2.read() - pre_enc2; 
+            
+            vel1, vel2, V, W = getSpeed(d_enc1, d_enc2, dt)
+            print('velocity is:', V, W)
+            
+            SLAM.slam.Update(V, W, dt)
         
-        vel1, vel2, V, W = getSpeed(d_enc1, d_enc2, dt)
-        SLAM.slam.Update(V, W, dt)
-    
-    
-        Time = time.time_ns() / 1E9    
-        pre_enc1 = enc1.read(); pre_enc2 = enc2.read()   
+        
+            Time = time.time_ns() / 1E9    
+            pre_enc1 = enc1.read(); pre_enc2 = enc2.read()   
+
+            dx = SLAM.slam.u0[SLAM.slam.ClosestIdx] - SLAM.slam.u0[0]
+            dy = SLAM.slam.u0[SLAM.slam.ClosestIdx + 1] - SLAM.slam.u0[1]
+            print('landmark location:', SLAM.slam.u0[SLAM.slam.ClosestIdx], SLAM.slam.u0[SLAM.slam.ClosestIdx + 1])
+            
+            Theta_rel = SLAM.slam.u0[2] - np.arctan2(dy, dx) * 180 / np.pi
+            min_dist = np.sqrt(dx**2 + dy**2)
+            print('Thetarel is:', Theta_rel, SLAM.slam.u0[:3], np.arctan2(dy, dx) * 180 / np.pi)
+            
+            adjuster = 360
+            if Theta_rel > 0:
+                adjuster = -360
+        
+            if abs(Theta_rel) > 180:
+                Theta_rel = adjuster + Theta_rel
+            
+            RotateCC(3, vel1, vel2)
+            
+            if abs(Theta_rel) > 160:
+                w_PID1.clear(); w_PID2.clear(); 
+                Forward(0, vel1, vel2)
+                
+                claw.Close()
+                
       
-        RotateCC(3, vel1, vel2)
+                Destination = True
+                foundBall = False
+                print('we got the ball')
+            
+
+            
+              
+        idx = 0
+        pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
+        Time = time.time_ns() / 1E9
+        while Destination == True:
+            print('encoder readings:',enc1.read(), enc2.read(), d_enc1, d_enc2)
+            time.sleep(0.01)
+            dt = time.time_ns() / 1E9 - Time
+            d_enc1 = enc1.read() - pre_enc1; d_enc2 = enc2.read() - pre_enc2;
+            
+            vel1, vel2, V, W = getSpeed(d_enc1, d_enc2, dt)
+            SLAM.slam.Update(V, W, dt)
+            print(V, W)
+        
+            #Time = time.time_ns() / 1E9    
+            #pre_enc1 = enc1.read(); pre_enc2 = enc2.read()   
+                
+            dx = points[idx][0] - SLAM.slam.u0[0]
+            dy = points[idx][1]- SLAM.slam.u0[1]
+            
+            Theta_rel = SLAM.slam.u0[2] - np.arctan2(dy, dx) * 180 / np.pi
+            min_dist = np.sqrt(dx**2 + dy**2)
+            print('Thetarel is:', Theta_rel, SLAM.slam.u0[:3], np.arctan2(dy, dx) * 180 / np.pi)
+   
+   
+            Theta_rel = Theta_rel + 15
+   
+            
+            adjuster = 360
+            if Theta_rel > 0:
+                adjuster = -360
+        
+            if abs(Theta_rel) > 180:
+                Theta_rel = adjuster + Theta_rel
   
             
-        if SLAM.slam.u0[2] > 180 and coord == 'max' or SLAM.slam.u0[2] < 5 and coord == 'min':
-            w_PID1.clear(); w_PID2.clear(); 
-            Forward(0, vel1, vel2)
-            claw.Open()
-            Terminate = True
+            if abs(Theta_rel) > 10:
+                if motion == 'forward':
+                    clearTerms = True
+                motion = 'rotate'          
+            else:
+                if motion == 'rotate':
+                    clearTerms = True
+                motion = 'forward'
+              
+            if motion == 'rotate':
+                Time = time.time_ns() / 1E9    
+                pre_enc1 = enc1.read(); pre_enc2 = enc2.read()  
+                if clearTerms == True:
+                    w_PID1.clear(); w_PID2.clear();
+                    clearTerms = False
+                    
+                if Theta_rel > 0:
+         
+                    Rotate (3, vel1, vel2)
+        
+                if Theta_rel < 0:
+                
+                    RotateCC (3, vel1, vel2)
+             
+            elif motion =='forward':
+                Time = time.time_ns() / 1E9    
+                pre_enc1 = enc1.read(); pre_enc2 = enc2.read()  
+                if clearTerms == True:
+                    w_PID1.clear(); w_PID2.clear(); 
+                    clearTerms = False
+                Forward (3, vel1, vel2)
+                
             
-            SLAM.slam.u0[3:] = 0
+            if min_dist < 0.55:
+                if len(points) == 2 and idx == 0:
+                    idx = 1
+                    continue
+                else:
+                    w_PID1.clear(); w_PID2.clear(); 
+                    Forward(0, vel1, vel2)
+                    Destination = False
+
+        Terminate = False
+        pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
+        Time = time.time_ns() / 1E9
+        while Terminate == False:
+            time.sleep(0.01)
+            dt = time.time_ns() / 1E9 - Time
+            d_enc1 = enc1.read() - pre_enc1; d_enc2 = enc2.read() - pre_enc2; 
+            
+            vel1, vel2, V, W = getSpeed(d_enc1, d_enc2, dt)
+            SLAM.slam.Update(V, W, dt)
         
         
+            Time = time.time_ns() / 1E9    
+            pre_enc1 = enc1.read(); pre_enc2 = enc2.read()   
+          
+            RotateCC(3, vel1, vel2)
+            print('Thetarel is:', Theta_rel, SLAM.slam.u0[:3])  
+                
+            if SLAM.slam.u0[2] > 210  and coord == 'max' or SLAM.slam.u0[2] > 20 and SLAM.slam.u0[2] < 40 and coord == 'min':
+                w_PID1.clear(); w_PID2.clear(); 
+                Forward(0, vel1, vel2)
+                claw.Open()
+                Terminate = True
+                
+                SLAM.slam.u0[3:] = 0
+except BaseException:
+    motor1.stop(); motor2.stop()
+
     
         
         

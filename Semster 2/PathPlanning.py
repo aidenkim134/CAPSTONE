@@ -10,7 +10,10 @@ import pandas as pd
 from math import sqrt, acos, atan2, sin, cos
 import matplotlib.pyplot as plt
 class PathPlanning:
-    def __init__(self, u0, destination):
+    def __init__(self, u0, destination, ClosestIdx):
+        u0 = u0.copy()
+        u0[ClosestIdx+ 1] = 0
+        u0[ClosestIdx] = 0
         j = np.where(u0[3:] == 0)[0][2] + 3
         u0 = u0[:j]
         
@@ -51,10 +54,10 @@ class PathPlanning:
         self.distmat = distmat.apply(lambda x: x > 0.20 + 0.1 * 2) 
         
         if destination == 'max':
-            self.xloc = self.xloc - 0.1; self.yloc = self.yloc - 0.25
+            self.xloc = self.xloc - 0.15; self.yloc = self.yloc - 0.15
             
         elif destination == 'min':
-            self.xloc = self.xloc + 0.1; self.yloc = self.yloc + 0.25
+            self.xloc = self.xloc + 0.15; self.yloc = self.yloc + 0.15
         
  
         
