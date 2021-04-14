@@ -1,3 +1,5 @@
+'''This script utilizes the camera image, and use CNN to detect image classification'''
+
 from picamera import PiCamera
 import time
 from picamera.array import PiRGBArray
@@ -59,9 +61,6 @@ class CNN:
         print(label)
         return label
 
-        
-        
-        
         
 if __name__ == '__main__':
     obj = CNN()

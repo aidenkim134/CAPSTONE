@@ -64,7 +64,7 @@ class VCRobot(object):
         
         return X
 dt = .1
-alpha = np.array([.1, .01, .01, .1])
+alpha = np.array([.001, .001, .001, .001])
 t = np.arange(0,40.1, dt)
 x0 = np.array([-5, -3, np.pi/2])
 N_landmarks = 50
@@ -80,7 +80,7 @@ R = np.array([[.01, .0, .0],
 v = 1 + .5*np.cos(.4*np.pi*t)
 w = -.2 + 2*np.cos(1.2*np.pi*t)
 robot = VCRobot(dt, alpha)
-X = robot.generate_motion(v,w,x0)
+X = robot.generate_motion(v,w,x0) 
 
 class LandmarkSensor(object):
     '''
@@ -319,8 +319,9 @@ for t,u in enumerate(U):
     
 X_hat = np.array(X_hat)
 
-plt.plot(X[:,0],X[:,1],label="Truth")
-plt.plot(X_hat[:,0], X_hat[:,1],label="Estimate")
+plt.plot((X[:,0] / 8 + 1.5) / 1.5, (X[:,1]/8 + 1.5)/1.5,label="Truth")
+plt.plot((X_hat[:,0]/8 + 1.5)/1.5, (X_hat[:,1]/8 + 1.5) / 1.5,label="Estimate")
 plt.title("Robot Location")
+plt.xlabel('x location (m)'); plt.ylabel('y location (m)')
 plt.legend()
 plt.show()

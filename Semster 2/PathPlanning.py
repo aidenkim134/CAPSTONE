@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Mar 12 05:32:06 2021
-
-@author: KIMAIDE
-"""
+'''This script is used to take care of path planning'''
 import numpy as np
 from scipy.spatial import distance_matrix
 import pandas as pd
@@ -11,12 +6,15 @@ from math import sqrt, acos, atan2, sin, cos
 import matplotlib.pyplot as plt
 class PathPlanning:
     def __init__(self, u0, destination, ClosestIdx):
-        u0 = u0.copy()
-        u0[ClosestIdx+ 1] = 0
-        u0[ClosestIdx] = 0
+        '''gets current state of the robot, u0
+        as well as destination from path planning and returns closest path points. '''
+        u0 = u0.copy()        
         j = np.where(u0[3:] == 0)[0][2] + 3
-        u0 = u0[:j]
-        
+        u0 = u0[:j-2]
+ 
+        self.fig = plt.figure(num=None, figsize=(8,8), dpi=80, facecolor='w', edgecolor='k')
+        self.ax = self.fig.add_subplot(1, 1, 1)
+        plt.xlabel('x location (m)'); plt.ylabel('y location (m)')
         self.pos = u0[0:2]
         x = []; y = []
         for idx in range(3, len(u0), 2):
@@ -36,15 +34,14 @@ class PathPlanning:
  
         
         size = len(self.x)
-        self.x = np.append(self.x, [np.repeat(self.x[idxmax], size), 
-                                            np.repeat(self.x[idxmin], size)])
-        self.y = np.append(self.y, [self.y, self.y])
+  
+        '''get corresponding points on the boundary as the detected balls'''
+        self.ax.plot(self.x[size:], self.y[size:], 'ro', markersize=20)
         
-        self.y = np.append(self.y, [np.repeat(self.y[idxmax], size), 
-                                        np.repeat(self.y[idxmin], size)])        
-        self.x = np.append(self.x, [self.x[:size], self.x[:size]])
         
- 
+        self.ax.plot(self.x[:size], self.y[:size], 'o', markersize=20);
+
+        self.ax.plot(self.pos[0], self.pos[1], 'd')
 
         df = pd.DataFrame({'x':self.x, 'y':self.y})
         distmat = pd.DataFrame(distance_matrix(df.values, df.values))
@@ -60,9 +57,11 @@ class PathPlanning:
             self.xloc = self.xloc + 0.15; self.yloc = self.yloc + 0.15
         
  
-        
+                
+        self.ax.plot(self.xloc, self.yloc, 'x')
         
     def getPoints (self):
+        '''get the closest path points'''
         def validate (xv, yv):
             FoundPath = False
             df = pd.DataFrame({'xv':xv, 'yv':yv})
@@ -127,6 +126,13 @@ class PathPlanning:
             To[0] = np.flipud(To[0])
             To[1] = np.flipud(To[1])
 
+        self.ax.plot(To[0][0], To[1][0], 'd', markersize = 2) 
+        self.ax.plot(To[0][1], To[1][1], 'd', markersize = 2)
+        self.ax.plot(Tloc[0][0], Tloc[1][0], 'd', markersize = 2)
+        self.ax.plot(Tloc[0][1], Tloc[1][1], 'd', markersize = 2)
+        
+        '''linear interpolation to find the points from tangent point the the 
+        desired location'''
         lino1 = self.line([To[0][0], self.pos[0]], [To[1][0], self.pos[1]])
         
         
@@ -144,7 +150,7 @@ class PathPlanning:
         y2 = lino2[0] + lino2[1] * x2
         
         x = [x1, x2]; y = [y1, y2]
-   
+        self.ax.plot(x, y, 'p', markersize = 2)
 
         xv = [np.array([]), np.array([])]; yv = [np.array([]), np.array([])]     
       
@@ -159,14 +165,14 @@ class PathPlanning:
         for i in range(2):
             FoundPath = validate(xv[i], yv[i])
             if FoundPath == True:
-       
+                self.ax.plot(x[i], y[i], 'd', self.xloc, self.yloc, 'd')
                 return [[x[i], y[i]], [self.xloc, self.yloc]]
         
         return [[self.xloc, self.yloc]]
     
         
     def dangerCircle(self):
-        
+        '''equation for danger circle'''
         def PointsInCircum(r, n=100):
             return np.array([(np.cos(2 * np.pi / n * x) * r, 
                               np.sin(2 * np.pi / n * x) * r) for x in range(0, n+1)]) 
@@ -179,10 +185,10 @@ class PathPlanning:
                 danger = np.append(danger, PointsInCircum(r) + p, axis=0)
                 
         self.danger = danger.T
-
-        
+        self.ax.plot(self.danger[0], self.danger[1], 'o', markersize=0.1)
             
     def tangent(self, Px, Py, Cx, Cy):
+        '''calculate tangent point on the circle'''
         a = self.Dcircle
         b = np.sqrt((Px - Cx)**2 + (Py - Cy)**2)  
         th = np.arccos(a / b)  # angle theta

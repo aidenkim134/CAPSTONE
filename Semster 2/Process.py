@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Feb 28 15:56:00 2021
-
-@author: KIMAIDE
-"""
+'''this script is used to take care of robot control logics'''
 import time
 import cv2
 import numpy as np
@@ -18,6 +13,7 @@ import Encoder
 import matplotlib.pyplot as plt
 from LandmarkFinding import FindLandmark
 from PathPlanning import PathPlanning
+import pandas as pd
 #from camera import CNN
 
 ''' CNN object'''
@@ -43,7 +39,7 @@ w_PID2 = PID(set_point = 0)
 
 
 def getSpeed (d_enc1, d_enc2, dt):
-    
+    '''obtain speed from odometry data for the time interval'''
     Ldist = (d_enc1)  / 6500
     Rdist = (d_enc2)  / 6500
     
@@ -69,6 +65,7 @@ def getSpeed (d_enc1, d_enc2, dt):
     
     return vel1, vel2, V, W
 
+'''Functions for robot movements command'''
 def RotateCC(speed, vel1, vel2):
     w_PID1.SetPoint = speed; w_PID2.SetPoint = speed; 
     w_PID1.update(vel1) ; w_PID2.update(vel2)
@@ -93,21 +90,15 @@ def Forward(speed, vel1, vel2):
     motor1.setPWM(w_PID1.output); motor1.forward()
     motor2.setPWM(w_PID2.output); motor2.forward()
     
-
-    
-
-
-
-
-
-
+'''object instance of SLAM'''
 SLAM = FindLandmark()
-# do two scan before beginning
+
 
 ballColor = 'Blue_Ball'
 try:
     while True:
-        
+        '''Change to two or one based on if you want to do one or two scans 
+        in the beginning'''
         for j in range(1):
             plt.figure()
             SLAM.Store()
@@ -130,6 +121,7 @@ try:
         dx = SLAM.slam.u0[SLAM.slam.ClosestIdx] - SLAM.slam.u0[0]
         dy = SLAM.slam.u0[SLAM.slam.ClosestIdx + 1] - SLAM.slam.u0[1]
         SLAM.servo.TurnTo(-np.arctan2(dy, dx) * 180 / np.pi + SLAM.slam.u0[2])
+        '''determine ball color'''
         #ballColor = color.predict()
         if ballColor == 'Red_Ball':
             ballColor = 'Blue_Ball'
@@ -140,13 +132,12 @@ try:
             coord = 'max'
         elif ballColor == 'Red_Ball':
             coord = 'min'
-        print(ballColor)
 
         time.sleep(2)
         break
         while foundBall == False:
 
-            
+            '''run until the robot is facing the closest ball and close enough to it'''
             time.sleep(0.01)
             dt = time.time_ns() / 1E9 - Time
             d_enc1 = enc1.read() - pre_enc1; d_enc2 = enc2.read() - pre_enc2;
@@ -154,22 +145,11 @@ try:
             vel1, vel2, V, W = getSpeed(d_enc1, d_enc2, dt)
             SLAM.slam.Update(V, W, dt)
             
-        
-            #Time = time.time_ns() / 1E9    
-            #pre_enc1 = enc1.read(); pre_enc2 = enc2.read()   
-                
-
-            
             dx = SLAM.slam.u0[SLAM.slam.ClosestIdx] - SLAM.slam.u0[0]
             dy = SLAM.slam.u0[SLAM.slam.ClosestIdx + 1] - SLAM.slam.u0[1]
-            
-      
-            
+
             Theta_rel = SLAM.slam.u0[2] - np.arctan2(dy, dx) * 180 / np.pi
-            
 
-
-            
             min_dist = np.sqrt(dx**2 + dy**2)
             
             adjuster = 360
@@ -210,8 +190,6 @@ try:
                     w_PID1.clear(); w_PID2.clear(); 
                     clearTerms = False
                 Forward (3, vel1, vel2)
-
-                
             
             if min_dist < 0.10:
 
@@ -219,38 +197,32 @@ try:
                 w_PID1.clear(); w_PID2.clear(); 
                 Forward(0, vel1, vel2)
 
-                
-                print('We found the ball-------------')
-
                 path = PathPlanning(SLAM.slam.u0, coord, SLAM.slam.ClosestIdx)
 
                 points = path.getPoints()
-                print(points)
+   
                 foundBall = True
-                print(Theta_rel)
+  
             
-            print('Thetarel is:', Theta_rel, SLAM.slam.u0[:3], np.arctan2(dy, dx) * 180 / np.pi)   
               
         pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
         Time = time.time_ns() / 1E9
         while foundBall == True:
-            print('encoder readings:',enc1.read(), enc2.read(), d_enc1, d_enc2)
+            '''do 180 degree turn and grab the ball'''
             time.sleep(0.01)
             dt = time.time_ns() / 1E9 - Time
             d_enc1 = enc1.read() - pre_enc1; d_enc2 = enc2.read() - pre_enc2; 
             
             vel1, vel2, V, W = getSpeed(d_enc1, d_enc2, dt)
-            print('velocity is:', V, W)
             
             SLAM.slam.Update(V, W, dt)
-        
         
             Time = time.time_ns() / 1E9    
             pre_enc1 = enc1.read(); pre_enc2 = enc2.read()   
 
             dx = SLAM.slam.u0[SLAM.slam.ClosestIdx] - SLAM.slam.u0[0]
             dy = SLAM.slam.u0[SLAM.slam.ClosestIdx + 1] - SLAM.slam.u0[1]
-            print('landmark location:', SLAM.slam.u0[SLAM.slam.ClosestIdx], SLAM.slam.u0[SLAM.slam.ClosestIdx + 1])
+            
             
             Theta_rel = SLAM.slam.u0[2] - np.arctan2(dy, dx) * 180 / np.pi
             min_dist = np.sqrt(dx**2 + dy**2)
@@ -283,29 +255,23 @@ try:
         pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
         Time = time.time_ns() / 1E9
         while Destination == True:
-            print('encoder readings:',enc1.read(), enc2.read(), d_enc1, d_enc2)
+            '''get to the destination based on path planning algorithm'''
+            
             time.sleep(0.01)
             dt = time.time_ns() / 1E9 - Time
             d_enc1 = enc1.read() - pre_enc1; d_enc2 = enc2.read() - pre_enc2;
             
             vel1, vel2, V, W = getSpeed(d_enc1, d_enc2, dt)
             SLAM.slam.Update(V, W, dt)
-            print(V, W)
-        
-            #Time = time.time_ns() / 1E9    
-            #pre_enc1 = enc1.read(); pre_enc2 = enc2.read()   
-                
+           
             dx = points[idx][0] - SLAM.slam.u0[0]
             dy = points[idx][1]- SLAM.slam.u0[1]
             
             Theta_rel = SLAM.slam.u0[2] - np.arctan2(dy, dx) * 180 / np.pi
             min_dist = np.sqrt(dx**2 + dy**2)
-            print('Thetarel is:', Theta_rel, SLAM.slam.u0[:3], np.arctan2(dy, dx) * 180 / np.pi)
-   
-   
+  
             Theta_rel = Theta_rel + 15
    
-            
             adjuster = 360
             if Theta_rel > 0:
                 adjuster = -360
@@ -360,6 +326,7 @@ try:
         pre_enc1 = enc1.read(); pre_enc2 = enc2.read()
         Time = time.time_ns() / 1E9
         while Terminate == False:
+            '''terminate once get to destination'''
             time.sleep(0.01)
             dt = time.time_ns() / 1E9 - Time
             d_enc1 = enc1.read() - pre_enc1; d_enc2 = enc2.read() - pre_enc2; 

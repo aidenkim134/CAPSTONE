@@ -1,9 +1,5 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Jan 31 17:39:34 2021
-
-@author: KIMAIDE
-"""
+'''This script is used to take care of SLAM using Extended Kalman Filter'''
+'''Refer to SLAM for dummies for calculation procedures'''
 import numpy as np
 from numpy import matmul as mul
 
@@ -16,7 +12,7 @@ class EKFSLAM:
         
         self.u0 = np.zeros(3 + 2 * self.N_landmarks) #3 coordinate system + 2 * landmarks
         self.sigma0 = np.zeros([3 + 2 * self.N_landmarks, 3 + 2 * self.N_landmarks])
-        self.u0[1] = 0.65
+        self.u0[1] = 0.65; 
         self.Rt = np.zeros([3 + 2 * self.N_landmarks, 3 + 2 * self.N_landmarks]) #adjust added uncertainty as robot moves. Fix zero for now
         self.Rt[0,0] = 0.0; self.Rt[1,1] = 0.0; self.Rt[2,2] = 0.0; 
         self.Gt = np.eye(3 + 2 * self.N_landmarks)
@@ -44,6 +40,8 @@ class EKFSLAM:
             self.Gt[2, 3] = - Vt / Wt * np.sin(self.u0[2] * np.pi / 180) + \
                         Vt / Wt * np.sin((self.u0[2] * np.pi / 180 + Wt * deltaT))
         elif Wt == 0:
+            '''for certain situation, right and wheel wheel distance would be 
+            same for the given time interval'''
             self.u0[0] = self.u0[0] + Vt * np.cos(self.u0[2] * np.pi / 180) * deltaT
             self.u0[1] = self.u0[1] + Vt * np.sin(self.u0[2] * np.pi / 180) * deltaT    
             self.u0[2] = self.u0[2] % 360
@@ -55,6 +53,8 @@ class EKFSLAM:
         self.sigma0 = mul(mul (self.Gt, self.sigma0), self.Gt.T) + self.Rt
     
     def AddLandmarks(self, Range, Bearing):
+        
+        '''add landmarks based on euclidean association'''
         x = self.u0[0] + Range * np.cos ((Bearing + self.u0[2]) * np.pi / 180)
         y = self.u0[1] + Range * np.sin ((Bearing + self.u0[2]) * np.pi / 180)
         j = np.where(self.u0[3:] == 0)[0][0] + 3
@@ -70,9 +70,12 @@ class EKFSLAM:
             self.u0[j+1] = y
             
         self.closest()
+        
             
         
     def AssociateLandmark (self, Range, Bearing):
+        
+        '''Add landmark based on extended kalman filter association'''
         z = np.array([Range, Bearing])
         
         #Q is uncertainty matrix of your lidar and bearing measurement
@@ -88,8 +91,6 @@ class EKFSLAM:
             # ujx = self.u0[0] + Range * np.cos (Bearing + self.u0[2])
             # ujy = self.u0[0] + Range * np.sin (Bearing + self.u0[2])
             
-            
-            #maybe take out -1
             S = np.array([self.u0[0] - self.u0[idx],  self.u0[1] - self.u0[idx + 1]]) * -1
         
             q = mul(S.T, S)
@@ -102,8 +103,9 @@ class EKFSLAM:
             r = np.sqrt(q)
             H_low = np.array([[-S[0] / r, -S[1] / r, 0, S[0] / r, S[1] / r],
                              [S[1] / q, -S[1] / q, -q, -S[1] / q, S[0] / q]])
-            
+            # define jacobian
             H = mul(H_low, Fxj)
+            
             #difference between predicted and actual observation
             e = (z - z_expected).T
             e = abs(e)
@@ -114,6 +116,8 @@ class EKFSLAM:
             d = np.sqrt(mul(mul(e, cov_i), e.T))
             return d, cov_i, H, e
         
+        ''''add new landmark or associate existing landmark based on 
+        distance'''
         alpha = 3
         mah_dist = [1E5]
         for i in range(3, j, 2):
@@ -143,6 +147,7 @@ class EKFSLAM:
             self.sigma0 = mul((np.identity(3 + 2 * self.N_landmarks) - mul(Kt, H)),  self.sigma0)
 
     def closest (self):
+        '''determine the closest distance ball'''
         self.ClosestIdx = 3
         maxDist = 10000
         offset = 0.3; maxp = 1.6

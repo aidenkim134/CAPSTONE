@@ -1,3 +1,5 @@
+'''control the claw mechanicm. Close and open by rotating the stepper motor'''
+
 import RPi.GPIO as GPIO
 import time
 import RPi.GPIO as GPIO
